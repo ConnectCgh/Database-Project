@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录到 SpeedEats</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 340px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+
+        .logo-icon::before {
+            content: "🍔";
+            font-size: 40px;
+            filter: grayscale(1) brightness(0.2);
+        }
+
+        .logo-text {
+            color: #ffc107;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .login-box {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 16px;
+            color: #f0f6fc;
+        }
+
+        .user-type-selector {
+            margin-bottom: 20px;
+        }
+
+        .user-type-title {
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #8b949e;
+        }
+
+        .user-types {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .user-type-card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 8px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+
+        .user-type-card:hover {
+            border-color: #ffc107;
+        }
+
+        .user-type-card.active {
+            border-color: #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
+        }
+
+        .user-type-icon {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .user-type-name {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 5px 12px;
+            font-size: 14px;
+            line-height: 20px;
+            color: #c9d1d9;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #ffc107;
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            background-color: #ffc107;
+            color: #0d1117;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #ffca2c;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+        }
+
+        .forgot-password {
+            display: block;
+            text-align: center;
+            margin-top: 16px;
+            font-size: 12px;
+            color: #ffc107;
+            text-decoration: none;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        .create-account {
+            margin-top: 20px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .create-account a {
+            color: #ffc107;
+            text-decoration: none;
+        }
+
+        .create-account a:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .footer-links {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .footer-links a {
+            color: #ffc107;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #f85149;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .accent-yellow {
+            color: #ffc107;
+        }
+
+        /* Django 消息样式 */
+        .messages {
+            margin-bottom: 16px;
+        }
+
+        .alert {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .alert-error {
+            background-color: rgba(248, 81, 73, 0.1);
+            border: 1px solid #f85149;
+            color: #f85149;
+        }
+
+        /* 自定义弹窗样式 */
+        .custom-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+            max-width: 300px;
+        }
+
+        .alert-error-popup {
+            background: linear-gradient(135deg, #f85149, #da3633);
+            border-left: 4px solid #f0a5a3;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: 16px;
+            }
+
+            .footer-links {
+                gap: 12px;
+            }
+
+            .user-types {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+
+            .custom-alert {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            <div class="logo-text">SpeedEats</div>
+        </div>
+
+        <div class="login-box">
+            <h1 class="login-title">登录到 <span class="accent-yellow">SpeedEats</span></h1>
+
+            <!-- Django 消息显示 -->
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}error{% else %}success{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="user-type-selector">
+                <div class="user-type-title">选择身份</div>
+                <div class="user-types">
+                    <div class="user-type-card active" data-type="customer">
+                        <div class="user-type-icon">👤</div>
+                        <div class="user-type-name">顾客</div>
+                    </div>
+                    <div class="user-type-card" data-type="rider">
+                        <div class="user-type-icon">🚴</div>
+                        <div class="user-type-name">骑手</div>
+                    </div>
+                    <div class="user-type-card" data-type="merchant">
+                        <div class="user-type-icon">🏪</div>
+                        <div class="user-type-name">商家</div>
+                    </div>
+                    <div class="user-type-card" data-type="platform">
+                        <div class="user-type-icon">⚙️</div>
+                        <div class="user-type-name">平台</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 修复：添加 method="POST" 和 csrf_token -->
+            <form id="login-form" method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="user_type" id="user-type-input" value="customer">
+
+                <div class="form-group">
+                    <label for="username" id="username-label">顾客名</label>
+                    <input type="text" id="username" name="username" placeholder="请输入顾客名" required>
+                    <div class="error-message" id="username-error">请输入有效的用户名</div>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="password">密码</label>
+                        <a href="#" class="forgot-password">忘记密码?</a>
+                    </div>
+                    <input type="password" id="password" name="password" placeholder="请输入密码" required>
+                    <div class="error-message" id="password-error">密码不能为空</div>
+                </div>
+
+                <button type="submit" class="btn">登录</button>
+            </form>
+
+            <div class="create-account">
+                新用户? <a href="{% url 'register' %}">创建账户</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <ul class="footer-links">
+                <li><a href="#">条款</a></li>
+                <li><a href="#">隐私</a></li>
+                <li><a href="#">安全</a></li>
+                <li><a href="#">联系 SpeedEats</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 显示自定义弹窗函数
+        function showAlert(message, type = 'error') {
+            // 移除现有的弹窗
+            const existingAlert = document.querySelector('.custom-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            // 创建新弹窗
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `custom-alert alert-${type}-popup`;
+            alertDiv.textContent = message;
+
+            // 添加到页面
+            document.body.appendChild(alertDiv);
+
+            // 3秒后自动消失
+            setTimeout(() => {
+                alertDiv.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // 用户类型选择功能
+        const userTypeCards = document.querySelectorAll('.user-type-card');
+        const usernameLabel = document.getElementById('username-label');
+        const usernameInput = document.getElementById('username');
+        const userTypeInput = document.getElementById('user-type-input');
+
+        // 用户类型对应的标签文本
+        const userTypeLabels = {
+            'customer': '顾客名',
+            'rider': '骑手名',
+            'merchant': '商家名',
+            'platform': '平台名'
+        };
+
+        // 用户类型对应的占位符文本
+        const userTypePlaceholders = {
+            'customer': '请输入顾客名',
+            'rider': '请输入骑手名',
+            'merchant': '请输入商家名',
+            'platform': '请输入平台名'
+        };
+
+        // 添加点击事件监听器
+        userTypeCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // 移除所有卡片的active类
+                userTypeCards.forEach(c => c.classList.remove('active'));
+
+                // 为当前点击的卡片添加active类
+                this.classList.add('active');
+
+                // 获取用户类型
+                const userType = this.getAttribute('data-type');
+
+                // 更新隐藏输入框的值
+                userTypeInput.value = userType;
+
+                // 更新用户名标签
+                usernameLabel.textContent = userTypeLabels[userType];
+
+                // 更新输入框的placeholder
+                usernameInput.placeholder = userTypePlaceholders[userType];
+            });
+        });
+
+        // 表单提交功能
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            let isValid = true;
+
+            // 重置错误消息
+            document.getElementById('username-error').style.display = 'none';
+            document.getElementById('password-error').style.display = 'none';
+
+            // 验证用户名
+            if (!username) {
+                document.getElementById('username-error').style.display = 'block';
+                isValid = false;
+            }
+
+            // 验证密码
+            if (!password) {
+                document.getElementById('password-error').style.display = 'block';
+                isValid = false;
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+            } else {
+                // 验证通过，显示加载状态
+                const submitBtn = document.querySelector('.btn');
+                submitBtn.textContent = '登录中...';
+                submitBtn.disabled = true;
+            }
+        });
+
+        // 页面加载时检查错误消息并显示弹窗
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否有错误消息
+            const errorMessages = document.querySelectorAll('.alert-error');
+            errorMessages.forEach(message => {
+                showAlert(message.textContent, 'error');
+                // 3秒后自动隐藏原始消息
+                setTimeout(() => {
+                    message.style.opacity = '0';
+                    setTimeout(() => {
+                        message.remove();
+                    }, 1000);
+                }, 3000);
+            });
+
+            // 自动隐藏成功消息（3秒后）
+            const successMessages = document.querySelectorAll('.alert-success');
+            successMessages.forEach(message => {
+                setTimeout(() => {
+                    message.style.opacity = '0';
+                    setTimeout(() => {
+                        message.remove();
+                    }, 1000);
+                }, 3000);
+            });
+        });
+
+        console.log('登录页面加载完成');
+    </script>
+</body>
+</html>

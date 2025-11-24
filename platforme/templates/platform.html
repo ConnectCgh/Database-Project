@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平台中心 - SpeedEats</title>
+    <style>
+        /* 原有的CSS样式保持不变 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 250px;
+            background-color: #161b22;
+            border-right: 1px solid #21262d;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+
+        .logo-icon::before {
+            content: "🍔️";
+            font-size: 24px;
+            filter: grayscale(1) brightness(0.2);
+        }
+
+        .logo-text {
+            color: #ffc107;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .platform-info {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .platform-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .platform-status {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 5px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #c9d1d9;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .nav-link.active {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            border-left-color: #ffc107;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        /* 主内容区样式 */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 300;
+            color: #f0f6fc;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-name {
+            margin-right: 15px;
+        }
+
+        .logout-btn {
+            background-color: transparent;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(248, 81, 73, 0.1);
+            border-color: #f85149;
+            color: #f85149;
+        }
+
+        /* 内容卡片样式 */
+        .content-card {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            background-color: #ffc107;
+            color: #0d1117;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background-color: #ffca2c;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #21262d;
+            color: #c9d1d9;
+            border-color: #30363d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #30363d;
+            box-shadow: 0 0 8px rgba(48, 54, 61, 0.4);
+        }
+
+        .btn-danger {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+            border-color: #f85149;
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(248, 81, 73, 0.2);
+        }
+
+        /* 表格样式 */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #21262d;
+        }
+
+        th {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 193, 7, 0.05);
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .status-approved {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        .status-rejected {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+        }
+
+        .status-unassigned {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+        }
+
+        .status-assigned {
+            background-color: rgba(33, 150, 243, 0.1);
+            color: #2196f3;
+        }
+
+        .status-ready {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        /* 筛选按钮组样式 - 新增 */
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-buttons .btn.active {
+            background-color: #ffc107;
+            color: #0d1117;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar .logo-text,
+            .sidebar .platform-name,
+            .sidebar .platform-status,
+            .sidebar .nav-link span {
+                display: none;
+            }
+
+            .sidebar .logo {
+                padding: 0 10px 20px;
+            }
+
+            .sidebar .nav-link {
+                justify-content: center;
+                padding: 12px 10px;
+            }
+
+            .sidebar .nav-icon {
+                margin-right: 0;
+            }
+
+            .main-content {
+                margin-left: 70px;
+            }
+
+            .filter-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <form style="display: none;">{% csrf_token %}</form>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div class="logo-text">SpeedEats</div>
+            </div>
+
+            <div class="platform-info">
+                <div class="platform-name">{{ platform_name }}</div>
+                <div class="platform-status">平台状态：正常</div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-target="merchant-section">
+                        <span class="nav-icon">🏪</span>
+                        <span>商家管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="rider-section">
+                        <span class="nav-icon">🚴</span>
+                        <span>骑手管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="order-section">
+                        <span class="nav-icon">📦</span>
+                        <span>订单管理</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="header">
+                <h1 class="page-title">平台管理中心</h1>
+                <div class="user-menu">
+                    <span class="user-name">{{ platform_name }}</span>
+                    <button class="logout-btn">退出登录</button>
+                </div>
+            </div>
+
+            <!-- 商家管理部分 -->
+            <div id="merchant-section" class="content-section">
+                <!-- 商家入驻请求 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">商家入驻请求（审核中）</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>商家名称</th>
+                                    <th>电话</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in pending_merchant_requests %}
+                                <tr>
+                                    <td>{{ request.merchant.merchant_name }}</td>
+                                    <td>{{ request.merchant.phone }}</td>
+                                    <td>
+                                        <button class="btn btn-secondary approve-merchant-request-btn"
+                                                style="padding: 4px 8px; margin-right: 5px;"
+                                                data-request-id="{{ request.id }}"
+                                                data-merchant-name="{{ request.merchant.merchant_name }}">
+                                            通过
+                                        </button>
+                                        <button class="btn btn-danger reject-merchant-request-btn"
+                                                style="padding: 4px 8px;"
+                                                data-request-id="{{ request.id }}"
+                                                data-merchant-name="{{ request.merchant.merchant_name }}">
+                                            拒绝
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" style="text-align: center;">暂无待审核的入驻申请</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 已入驻商家 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">已入驻商家</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>商家名称</th>
+                                    <th>电话</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in approved_merchant_requests %}
+                                <tr>
+                                    <td>{{ request.merchant.merchant_name }}</td>
+                                    <td>{{ request.merchant.phone }}</td>
+                                    <td>
+                                        <button class="btn btn-danger remove-merchant-btn"
+                                                style="padding: 4px 8px;"
+                                                data-request-id="{{ request.id }}"
+                                                data-merchant-name="{{ request.merchant.merchant_name }}">
+                                            移除
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" style="text-align: center;">暂无已入驻商家</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 骑手管理部分 -->
+            <div id="rider-section" class="content-section" style="display: none;">
+                <!-- 骑手签约请求 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">骑手签约请求（审核中）</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>骑手名称</th>
+                                    <th>电话</th>
+                                    <th>当前状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in pending_rider_requests %}
+                                <tr>
+                                    <td>{{ request.rider.rider_name }}</td>
+                                    <td>{{ request.rider.phone }}</td>
+                                    <td>
+                                        <span class="status-badge status-pending">{{ request.rider.get_status_display }}</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-secondary approve-rider-request-btn"
+                                                style="padding: 4px 8px; margin-right: 5px;"
+                                                data-request-id="{{ request.id }}"
+                                                data-rider-name="{{ request.rider.rider_name }}">
+                                            通过
+                                        </button>
+                                        <button class="btn btn-danger reject-rider-request-btn"
+                                                style="padding: 4px 8px;"
+                                                data-request-id="{{ request.id }}"
+                                                data-rider-name="{{ request.rider.rider_name }}">
+                                            拒绝
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center;">暂无待审核的签约申请</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 已签约骑手 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">已签约骑手</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>骑手名称</th>
+                                    <th>电话</th>
+                                    <th>当前状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in approved_rider_requests %}
+                                <tr>
+                                    <td>{{ request.rider.rider_name }}</td>
+                                    <td>{{ request.rider.phone }}</td>
+                                    <td>
+                                        <span class="status-badge status-approved">{{ request.rider.get_status_display }}</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger remove-rider-btn"
+                                                style="padding: 4px 8px;"
+                                                data-request-id="{{ request.id }}"
+                                                data-rider-name="{{ request.rider.rider_name }}">
+                                            移除
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center;">暂无已签约骑手</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 订单管理部分 -->
+            <div id="order-section" class="content-section" style="display: none;">
+                <!-- 订单列表 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">订单管理</h2>
+                        <div class="filter-buttons">
+                            <button class="btn btn-secondary filter-btn active" data-status="all">全部</button>
+                            <button class="btn btn-secondary filter-btn" data-status="unassigned">待分配骑手</button>
+                            <button class="btn btn-secondary filter-btn" data-status="assigned">已分配骑手</button>
+                            <button class="btn btn-secondary filter-btn" data-status="ready">顾客待取餐</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>订单ID</th>
+                                    <th>顾客</th>
+                                    <th>商家</th>
+                                    <th>餐品</th>
+                                    <th>骑手</th>
+                                    <th>价格</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr data-order-id="{{ order.id }}" data-status="{{ order.status }}">
+                                    <td>{{ order.id }}</td>
+                                    <td>{{ order.customer.customer_name }}</td>
+                                    <td>{{ order.merchant.merchant_name }}</td>
+                                    <td>{{ order.meal.name }}</td>
+                                    <td>
+                                        {% if order.rider %}
+                                            {{ order.rider.rider_name }}
+                                        {% else %}
+                                            <span style="color: #8b949e;">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>¥{{ order.price }}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ order.status }}">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if order.status == 'unassigned' %}
+                                            <button class="btn btn-danger delete-order-btn"
+                                                    style="padding: 4px 8px;"
+                                                    data-order-id="{{ order.id }}"
+                                                    data-customer-name="{{ order.customer.customer_name }}">
+                                                删除
+                                            </button>
+                                        {% else %}
+                                            <span style="color: #8b949e; font-size: 12px;">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" style="text-align: center;">暂无订单</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 订单统计 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">订单统计</h2>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="text-align: center; padding: 15px; background-color: #21262d; border-radius: 6px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #ffc107;">{{ total_orders }}</div>
+                            <div style="font-size: 14px; color: #8b949e;">总订单数</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background-color: #21262d; border-radius: 6px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #f85149;">{{ unassigned_orders }}</div>
+                            <div style="font-size: 14px; color: #8b949e;">待分配订单</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background-color: #21262d; border-radius: 6px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #2196f3;">{{ assigned_orders }}</div>
+                            <div style="font-size: 14px; color: #8b949e;">已分配订单</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background-color: #21262d; border-radius: 6px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #3fb950;">{{ ready_orders }}</div>
+                            <div style="font-size: 14px; color: #8b949e;">待取餐订单</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 导航菜单切换
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // 更新活动菜单项
+                document.querySelectorAll('.nav-link').forEach(item => {
+                    item.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                // 显示对应的内容区域
+                const targetId = this.getAttribute('data-target');
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+                document.getElementById(targetId).style.display = 'block';
+            });
+        });
+
+        // 获取 CSRF token 的函数
+        function getCSRFToken() {
+            const csrfTokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfTokenInput) {
+                return csrfTokenInput.value;
+            }
+            // 如果没有找到，尝试从 cookie 中获取
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 订单筛选功能 - 修改为按钮组形式
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const ordersTable = document.getElementById('orders-table');
+
+            function filterOrders(status) {
+                const rows = ordersTable.querySelectorAll('tbody tr');
+
+                rows.forEach(row => {
+                    const rowStatus = row.getAttribute('data-status');
+
+                    let showRow = true;
+
+                    if (status !== 'all' && rowStatus !== status) {
+                        showRow = false;
+                    }
+
+                    row.style.display = showRow ? '' : 'none';
+                });
+            }
+
+            // 为每个筛选按钮添加点击事件
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // 更新活动筛选按钮
+                    filterButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    // 筛选订单
+                    const status = this.getAttribute('data-status');
+                    filterOrders(status);
+                });
+            });
+        });
+
+        // 删除订单功能
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-order-btn')) {
+                const orderId = e.target.getAttribute('data-order-id');
+                const customerName = e.target.getAttribute('data-customer-name');
+
+                if (confirm(`确定要删除顾客 ${customerName} 的订单吗？此操作不可恢复。`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '删除中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/platform/delete-order/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'order_id': orderId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+        });
+
+        // 原有的商家和骑手管理功能保持不变
+        document.addEventListener('click', function(e) {
+            // 通过商家入驻申请
+            if (e.target.classList.contains('approve-merchant-request-btn')) {
+                const requestId = e.target.getAttribute('data-request-id');
+                const merchantName = e.target.getAttribute('data-merchant-name');
+
+                if (confirm(`确定要通过 ${merchantName} 的入驻申请吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '处理中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/platform/approve-merchant-request/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'request_id': requestId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+
+            // 拒绝商家入驻申请
+            if (e.target.classList.contains('reject-merchant-request-btn')) {
+                const requestId = e.target.getAttribute('data-request-id');
+                const merchantName = e.target.getAttribute('data-merchant-name');
+
+                if (confirm(`确定要拒绝 ${merchantName} 的入驻申请吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '处理中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/platform/reject-merchant-request/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'request_id': requestId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+
+            // 移除已入驻商家
+            if (e.target.classList.contains('remove-merchant-btn')) {
+                const requestId = e.target.getAttribute('data-request-id');
+                const merchantName = e.target.getAttribute('data-merchant-name');
+
+                if (confirm(`确定要移除商家 ${merchantName} 吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '处理中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/platform/remove-merchant/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'request_id': requestId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+
+            // 通过骑手签约申请
+            if (e.target.classList.contains('approve-rider-request-btn')) {
+                const requestId = e.target.getAttribute('data-request-id');
+                const riderName = e.target.getAttribute('data-rider-name');
+
+                if (confirm(`确定要通过 ${riderName} 的签约申请吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '处理中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/platform/approve-rider-request/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'request_id': requestId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+
+            // 拒绝骑手签约申请
+            if (e.target.classList.contains('reject-rider-request-btn')) {
+                const requestId = e.target.getAttribute('data-request-id');
+                const riderName = e.target.getAttribute('data-rider-name');
+
+                if (confirm(`确定要拒绝 ${riderName} 的签约申请吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '处理中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/platform/reject-rider-request/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'request_id': requestId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+
+            // 移除已签约骑手
+            if (e.target.classList.contains('remove-rider-btn')) {
+                const requestId = e.target.getAttribute('data-request-id');
+                const riderName = e.target.getAttribute('data-rider-name');
+
+                if (confirm(`确定要移除骑手 ${riderName} 吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '处理中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/platform/remove-rider/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'request_id': requestId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+        });
+
+        // 退出登录
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = '/login/';
+            }
+        });
+    </script>
+</body>
+</html>

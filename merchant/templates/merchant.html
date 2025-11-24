@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商家中心 - SpeedEats</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 250px;
+            background-color: #161b22;
+            border-right: 1px solid #21262d;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+
+        .logo-icon::before {
+            content: "🍔";
+            font-size: 24px;
+            filter: grayscale(1) brightness(0.2);
+        }
+
+        .logo-text {
+            color: #ffc107;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .merchant-info {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .merchant-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .merchant-status {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 5px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #c9d1d9;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .nav-link.active {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            border-left-color: #ffc107;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        /* 主内容区样式 */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 300;
+            color: #f0f6fc;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-name {
+            margin-right: 15px;
+        }
+
+        .logout-btn {
+            background-color: transparent;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(248, 81, 73, 0.1);
+            border-color: #f85149;
+            color: #f85149;
+        }
+
+        /* 内容卡片样式 */
+        .content-card {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            background-color: #ffc107;
+            color: #0d1117;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background-color: #ffca2c;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #21262d;
+            color: #c9d1d9;
+            border-color: #30363d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #30363d;
+            box-shadow: 0 0 8px rgba(48, 54, 61, 0.4);
+        }
+
+        /* 表格样式 */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #21262d;
+        }
+
+        th {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 193, 7, 0.05);
+        }
+
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            line-height: 20px;
+            color: #c9d1d9;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            border-color: #ffc107;
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-unassigned {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+        }
+
+        .status-assigned {
+            background-color: rgba(45, 164, 255, 0.1);
+            color: #2da4ff;
+        }
+
+        .status-ready {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        .status-completed {
+            background-color: rgba(56, 139, 253, 0.1);
+            color: #388bfd;
+        }
+
+        .status-cancelled {
+            background-color: rgba(139, 148, 158, 0.1);
+            color: #8b949e;
+        }
+
+        /* 平台卡片 */
+        .platform-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .platform-card {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s;
+        }
+
+        .platform-card:hover {
+            border-color: #ffc107;
+        }
+
+        .platform-card.joined {
+            border-color: #3fb950;
+        }
+
+        .platform-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .platform-name {
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .platform-status {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .platform-status.joined {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        .platform-status.not-joined {
+            background-color: rgba(139, 148, 158, 0.1);
+            color: #8b949e;
+        }
+
+        .platform-phone {
+            font-size: 12px;
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(13, 17, 23, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #f0f6fc;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #21262d;
+        }
+
+        .platform-status.applied {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .platform-card.applied {
+            border-color: #ffc107;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar .logo-text,
+            .sidebar .merchant-name,
+            .sidebar .merchant-status,
+            .sidebar .nav-link span {
+                display: none;
+            }
+
+            .sidebar .logo {
+                padding: 0 10px 20px;
+            }
+
+            .sidebar .nav-link {
+                justify-content: center;
+                padding: 12px 10px;
+            }
+
+            .sidebar .nav-icon {
+                margin-right: 0;
+            }
+
+            .main-content {
+                margin-left: 70px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 筛选按钮组 */
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-buttons .btn.active {
+            background-color: #ffc107;
+            color: #0d1117;
+        }
+
+        /* 订单操作按钮 */
+        .order-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .order-actions .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .delete-order-btn {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+            border-color: #f85149;
+        }
+
+        .delete-order-btn:hover {
+            background-color: rgba(248, 81, 73, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div class="logo-text">SpeedEats</div>
+            </div>
+
+            <div class="merchant-info">
+                <div class="merchant-name">{{ merchant_name }}</div>
+                <div class="merchant-status">商家状态：正常</div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-target="platform-section">
+                        <span class="nav-icon">🏪</span>
+                        <span>入驻平台</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="meal-section">
+                        <span class="nav-icon">🍔</span>
+                        <span>管理餐品</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="discount-section">
+                        <span class="nav-icon">💰</span>
+                        <span>管理折扣</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="order-section">
+                        <span class="nav-icon">📦</span>
+                        <span>管理订单</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="header">
+                <h1 class="page-title">商家管理中心</h1>
+                <div class="user-menu">
+                    <span class="user-name">{{ merchant_name }}</span>
+                    <button class="logout-btn">退出登录</button>
+                </div>
+            </div>
+
+            <!-- 入驻平台部分 -->
+            <div id="platform-section" class="content-section">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">入驻平台</h2>
+                    </div>
+
+                    <div class="platform-cards">
+                       <!-- 已入驻平台 -->
+                        {% for platform in joined_platforms %}
+                        <div class="platform-card joined">
+                            <div class="platform-header">
+                                <div class="platform-name">{{ platform.platform_name }}</div>
+                                <div class="platform-status joined">已入驻</div>
+                            </div>
+                            <div class="platform-phone">电话: {{ platform.phone }}</div>
+                            <button class="btn btn-secondary" style="width: 100%;">查看详情</button>
+                        </div>
+                        {% endfor %}
+
+                        <!-- 已申请平台 -->
+                        {% for platform in applied_platforms %}
+                        <div class="platform-card applied">
+                            <div class="platform-header">
+                                <div class="platform-name">{{ platform.platform_name }}</div>
+                                <div class="platform-status applied">审核中</div>
+                            </div>
+                            <div class="platform-phone">电话: {{ platform.phone }}</div>
+                            <button class="btn btn-secondary" style="width: 100%;" disabled>审核中</button>
+                        </div>
+                        {% endfor %}
+
+                        <!-- 未申请平台 -->
+                        {% for platform in not_joined_platforms %}
+                        <div class="platform-card">
+                            <div class="platform-header">
+                                <div class="platform-name">{{ platform.platform_name }}</div>
+                                <div class="platform-status not-joined">未入驻</div>
+                            </div>
+                            <div class="platform-phone">电话: {{ platform.phone }}</div>
+                            <button class="btn join-platform-btn" style="width: 100%;" data-platform-id="{{ platform.id }}">
+                                申请入驻
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 管理餐品部分 -->
+            <div id="meal-section" class="content-section" style="display: none;">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">餐品管理</h2>
+                        <button class="btn" id="add-meal-btn">添加餐品</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>餐品名称</th>
+                                    <th>价格</th>
+                                    <th>类型</th>
+                                    <th>平台</th>
+                                    <th>添加时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="meals-table-body">
+                                {% for meal in meals %}
+                                <tr>
+                                    <td>{{ meal.name }}</td>
+                                    <td>¥{{ meal.price }}</td>
+                                    <td>{{ meal.get_meal_type_display }}</td>
+                                    <td>{{ meal.platform.platform_name }}</td>
+                                    <td>{{ meal.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <button class="btn btn-secondary edit-meal-btn"
+                                                data-meal-id="{{ meal.id }}"
+                                                style="padding: 4px 8px; margin-right: 5px;">
+                                            编辑
+                                        </button>
+                                        <button class="btn btn-secondary delete-meal-btn"
+                                                data-meal-id="{{ meal.id }}"
+                                                style="padding: 4px 8px; background-color: rgba(248, 81, 73, 0.1); color: #f85149; border-color: #f85149;">
+                                            删除
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" style="text-align: center;">暂无餐品，请添加</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 管理折扣部分 -->
+            <div id="discount-section" class="content-section" style="display: none;">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">平台折扣管理</h2>
+                        <button class="btn" id="set-discount-btn">设置折扣</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>平台名称</th>
+                                    <th>当前折扣</th>
+                                    <th>最后更新时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="discounts-table-body">
+                                {% for discount in platform_discounts %}
+                                <tr>
+                                    <td>{{ discount.platform.platform_name }}</td>
+                                    <td>{{ discount.discount.discount_rate }}%</td>
+                                    <td>{{ discount.updated_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <button class="btn btn-secondary edit-discount-btn"
+                                                data-discount-id="{{ discount.id }}"
+                                                data-platform-id="{{ discount.platform.id }}"
+                                                data-discount-rate="{{ discount.discount.discount_rate }}"
+                                                style="padding: 4px 8px; margin-right: 5px;">
+                                            修改
+                                        </button>
+                                        <button class="btn btn-secondary delete-discount-btn"
+                                                data-discount-id="{{ discount.id }}"
+                                                style="padding: 4px 8px; background-color: rgba(248, 81, 73, 0.1); color: #f85149; border-color: #f85149;">
+                                            删除
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center;">暂无折扣设置</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 管理订单部分 -->
+            <div id="order-section" class="content-section" style="display: none;">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">订单管理</h2>
+                        <div class="filter-buttons">
+                            <button class="btn btn-secondary filter-btn active" data-status="all">全部</button>
+                            <button class="btn btn-secondary filter-btn" data-status="unassigned">未分配骑手</button>
+                            <button class="btn btn-secondary filter-btn" data-status="assigned">已分配骑手</button>
+                            <button class="btn btn-secondary filter-btn" data-status="ready">顾客待取餐</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>订单号</th>
+                                    <th>顾客</th>
+                                    <th>平台</th>
+                                    <th>餐品</th>
+                                    <th>价格</th>
+                                    <th>骑手</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-table-body">
+                                {% for order in orders %}
+                                <tr data-status="{{ order.status }}">
+                                    <td>#{{ order.id }}</td>
+                                    <td>{{ order.customer.customer_name }}</td>
+                                    <td>{{ order.platform.platform_name }}</td>
+                                    <td>{{ order.meal.name }}</td>
+                                    <td>¥{{ order.price }}</td>
+                                    <td>
+                                        {% if order.rider %}
+                                            {{ order.rider.rider_name }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.status == 'unassigned' %}
+                                            <span class="status-badge status-unassigned">未分配骑手</span>
+                                        {% elif order.status == 'assigned' %}
+                                            <span class="status-badge status-assigned">已分配骑手</span>
+                                        {% elif order.status == 'ready' %}
+                                            <span class="status-badge status-ready">顾客待取餐</span>
+                                        {% elif order.status == 'completed' %}
+                                            <span class="status-badge status-completed">已完成</span>
+                                        {% elif order.status == 'cancelled' %}
+                                            <span class="status-badge status-cancelled">已取消</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <div class="order-actions">
+                                            {% if order.status == 'unassigned' %}
+                                                <button class="btn delete-order-btn"
+                                                        data-order-id="{{ order.id }}"
+                                                        data-order-info="订单 #{{ order.id }} - {{ order.meal.name }}">
+                                                    删除
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" style="text-align: center;">暂无订单</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加餐品模态框 -->
+    <div id="add-meal-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">添加新餐品</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <form id="add-meal-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="platform-id">选择平台</label>
+                    <select id="platform-id" name="platform-id" required>
+                        <option value="">请选择平台</option>
+                        {% for platform in joined_platforms %}
+                        <option value="{{ platform.id }}">{{ platform.platform_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="meal-name">餐品名称</label>
+                    <input type="text" id="meal-name" name="meal-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="meal-price">价格</label>
+                    <input type="number" id="meal-price" name="meal-price" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="meal-type">餐品类型</label>
+                    <select id="meal-type" name="meal-type" required>
+                        <option value="">请选择类型</option>
+                        <option value="breakfast">早餐</option>
+                        <option value="lunch">午餐</option>
+                        <option value="dinner">晚餐</option>
+                        <option value="lunch_and_dinner">午餐和晚餐</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-meal-btn">取消</button>
+                    <button type="submit" class="btn">添加餐品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 编辑餐品模态框 -->
+    <div id="edit-meal-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑餐品</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <form id="edit-meal-form">
+                {% csrf_token %}
+                <input type="hidden" id="edit-meal-id" name="meal-id">
+
+                <div class="form-group">
+                    <label for="edit-meal-platform-id">选择平台</label>
+                    <select id="edit-meal-platform-id" name="platform-id" required>
+                        <option value="">请选择平台</option>
+                        {% for platform in joined_platforms %}
+                        <option value="{{ platform.id }}">{{ platform.platform_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-meal-name">餐品名称</label>
+                    <input type="text" id="edit-meal-name" name="meal-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-meal-price">价格</label>
+                    <input type="number" id="edit-meal-price" name="meal-price" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-meal-type">餐品类型</label>
+                    <select id="edit-meal-type" name="meal-type" required>
+                        <option value="">请选择类型</option>
+                        <option value="breakfast">早餐</option>
+                        <option value="lunch">午餐</option>
+                        <option value="dinner">晚餐</option>
+                        <option value="lunch_and_dinner">午餐和晚餐</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-edit-meal-btn">取消</button>
+                    <button type="submit" class="btn">更新餐品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 设置折扣模态框 -->
+    <div id="set-discount-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">设置平台折扣</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <form id="set-discount-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="discount-platform-id">选择平台</label>
+                    <select id="discount-platform-id" name="platform-id" required>
+                        <option value="">请选择平台</option>
+                        {% for platform in joined_platforms %}
+                        <option value="{{ platform.id }}">{{ platform.platform_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="discount-id">选择折扣</label>
+                    <select id="discount-id" name="discount-id" required>
+                        <option value="">请选择折扣</option>
+                        {% for discount in available_discounts %}
+                        <option value="{{ discount.id }}">{{ discount.discount_rate }}% 折扣</option>
+                        {% endfor %}
+                    </select>
+                    <small style="color: #8b949e; font-size: 12px;">请从预置折扣中选择</small>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-discount-btn">取消</button>
+                    <button type="submit" class="btn">设置折扣</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 编辑折扣模态框 -->
+    <div id="edit-discount-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">修改折扣</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <form id="edit-discount-form">
+                {% csrf_token %}
+                <input type="hidden" id="edit-discount-id" name="discount-id">
+                <input type="hidden" id="edit-discount-platform-id" name="platform-id">
+
+                <div class="form-group">
+                    <label for="edit-discount-platform-name">平台名称</label>
+                    <input type="text" id="edit-discount-platform-name" readonly style="background-color: #21262d; color: #8b949e;">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-discount-select">选择折扣</label>
+                    <select id="edit-discount-select" name="discount-id" required>
+                        <option value="">请选择折扣</option>
+                        {% for discount in available_discounts %}
+                        <option value="{{ discount.id }}">{{ discount.discount_rate }}% 折扣</option>
+                        {% endfor %}
+                    </select>
+                    <small style="color: #8b949e; font-size: 12px;">请从预置折扣中选择</small>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-edit-discount-btn">取消</button>
+                    <button type="submit" class="btn">更新折扣</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 导航菜单切换
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // 更新活动菜单项
+                document.querySelectorAll('.nav-link').forEach(item => {
+                    item.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                // 显示对应的内容区域
+                const targetId = this.getAttribute('data-target');
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+                document.getElementById(targetId).style.display = 'block';
+            });
+        });
+
+        // 订单状态筛选
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const status = this.getAttribute('data-status');
+
+                // 更新活动筛选按钮
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                // 筛选订单
+                const rows = document.querySelectorAll('#orders-table-body tr');
+                rows.forEach(row => {
+                    if (status === 'all' || row.getAttribute('data-status') === status) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // 删除订单功能
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-order-btn')) {
+                const orderId = e.target.getAttribute('data-order-id');
+                const orderInfo = e.target.getAttribute('data-order-info');
+
+                if (confirm(`确定要删除 ${orderInfo} 吗？此操作不可恢复。`)) {
+                    deleteOrder(orderId);
+                }
+            }
+        });
+
+        // 删除订单函数
+        function deleteOrder(orderId) {
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求
+            fetch(`/merchant/delete-order/${orderId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('订单删除成功！');
+                    updateOrdersTable();
+                } else {
+                    alert('删除失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试');
+            });
+        }
+
+        // 更新订单表格
+        function updateOrdersTable() {
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求获取最新的订单数据
+            fetch('/merchant/get-orders/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const tableBody = document.getElementById('orders-table-body');
+                    tableBody.innerHTML = '';
+
+                    if (data.orders.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center;">暂无订单</td></tr>';
+                    } else {
+                        data.orders.forEach(order => {
+                            const row = document.createElement('tr');
+                            row.setAttribute('data-status', order.status);
+
+                            // 获取状态显示文本
+                            const statusText = getStatusText(order.status);
+
+                            row.innerHTML = `
+                                <td>#${order.id}</td>
+                                <td>${order.customer_name}</td>
+                                <td>${order.platform_name}</td>
+                                <td>${order.meal_name}</td>
+                                <td>¥${order.price}</td>
+                                <td>${order.rider_name || '-'}</td>
+                                <td>
+                                    <span class="status-badge status-${order.status}">${statusText}</span>
+                                </td>
+                                <td>${order.created_at}</td>
+                                <td>
+                                    <div class="order-actions">
+                                        ${order.status === 'unassigned' ?
+                                            `<button class="btn delete-order-btn"
+                                                    data-order-id="${order.id}"
+                                                    data-order-info="订单 #${order.id} - ${order.meal_name}">
+                                                删除
+                                            </button>` : ''}
+                                    </div>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    }
+                } else {
+                    alert('获取订单数据失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试');
+            });
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'unassigned': '未分配骑手',
+                'assigned': '已分配骑手',
+                'ready': '顾客待取餐',
+                'completed': '已完成',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 退出登录
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = '/login/';
+            }
+        });
+
+        // 平台入驻申请
+        document.querySelectorAll('.join-platform-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const platformId = this.getAttribute('data-platform-id');
+                const platformName = this.closest('.platform-card').querySelector('.platform-name').textContent;
+
+                if (confirm(`确定要申请入驻 ${platformName} 吗？`)) {
+                    // 显示加载状态
+                    const originalText = this.textContent;
+                    this.textContent = '申请中...';
+                    this.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                    // 发送 AJAX 请求
+                    fetch('/merchant/apply-platform/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'platform_id': platformId
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert(data.message);
+                            this.textContent = originalText;
+                            this.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试');
+                        this.textContent = originalText;
+                        this.disabled = false;
+                    });
+                }
+            });
+        });
+
+        // 原有的餐品和折扣管理代码保持不变...
+        // [此处保留原有的餐品和折扣管理JavaScript代码]
+        // 添加餐品模态框
+        const addMealBtn = document.getElementById('add-meal-btn');
+        const addMealModal = document.getElementById('add-meal-modal');
+        const closeModalBtn = document.querySelector('.close-btn');
+        const cancelMealBtn = document.getElementById('cancel-meal-btn');
+        const addMealForm = document.getElementById('add-meal-form');
+
+        addMealBtn.addEventListener('click', function() {
+            addMealModal.style.display = 'flex';
+        });
+
+        closeModalBtn.addEventListener('click', function() {
+            addMealModal.style.display = 'none';
+        });
+
+        cancelMealBtn.addEventListener('click', function() {
+            addMealModal.style.display = 'none';
+        });
+
+        // 点击模态框外部关闭
+        window.addEventListener('click', function(e) {
+            if (e.target === addMealModal) {
+                addMealModal.style.display = 'none';
+            }
+        });
+
+        // 添加餐品表单提交
+        addMealForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const platformId = document.getElementById('platform-id').value;
+            const mealName = document.getElementById('meal-name').value;
+            const mealPrice = document.getElementById('meal-price').value;
+            const mealType = document.getElementById('meal-type').value;
+
+            // 显示加载状态
+            const submitBtn = addMealForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '添加中...';
+            submitBtn.disabled = true;
+
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求
+            fetch('/merchant/add-meal/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'platform-id': platformId,
+                    'meal-name': mealName,
+                    'meal-price': mealPrice,
+                    'meal-type': mealType
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 添加成功
+                    alert('餐品添加成功！');
+                    addMealModal.style.display = 'none';
+                    addMealForm.reset();
+
+                    // 不刷新页面，而是动态更新餐品表格
+                    updateMealsTable();
+                } else {
+                    // 添加失败
+                    alert('添加失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        // 编辑餐品功能
+        const editMealModal = document.getElementById('edit-meal-modal');
+        const editMealForm = document.getElementById('edit-meal-form');
+        const cancelEditMealBtn = document.getElementById('cancel-edit-meal-btn');
+
+        // 编辑按钮点击事件
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('edit-meal-btn')) {
+                const mealId = e.target.getAttribute('data-meal-id');
+                openEditModal(mealId);
+            }
+
+            if (e.target.classList.contains('delete-meal-btn')) {
+                const mealId = e.target.getAttribute('data-meal-id');
+                deleteMeal(mealId);
+            }
+        });
+
+        // 打开编辑模态框
+        function openEditModal(mealId) {
+            // 获取当前行的数据
+            const row = document.querySelector(`[data-meal-id="${mealId}"]`).closest('tr');
+            const name = row.cells[0].textContent;
+            const price = row.cells[1].textContent.replace('¥', '');
+            const typeText = row.cells[2].textContent;
+            const platformName = row.cells[3].textContent;
+
+            // 将中文类型转换为值
+            let typeValue = '';
+            switch(typeText) {
+                case '早餐': typeValue = 'breakfast'; break;
+                case '午餐': typeValue = 'lunch'; break;
+                case '晚餐': typeValue = 'dinner'; break;
+                case '午餐和晚餐': typeValue = 'lunch_and_dinner'; break;
+            }
+
+            // 填充表单
+            document.getElementById('edit-meal-id').value = mealId;
+            document.getElementById('edit-meal-name').value = name;
+            document.getElementById('edit-meal-price').value = price;
+            document.getElementById('edit-meal-type').value = typeValue;
+
+            // 设置平台选择
+            const platformSelect = document.getElementById('edit-meal-platform-id');
+            for (let i = 0; i < platformSelect.options.length; i++) {
+                if (platformSelect.options[i].text === platformName) {
+                    platformSelect.selectedIndex = i;
+                    break;
+                }
+            }
+
+            // 显示模态框
+            editMealModal.style.display = 'flex';
+        }
+
+        // 编辑餐品模态框关闭按钮
+        document.querySelector('#edit-meal-modal .close-btn').addEventListener('click', function() {
+            editMealModal.style.display = 'none';
+        });
+
+        // 关闭编辑模态框
+        cancelEditMealBtn.addEventListener('click', function() {
+            editMealModal.style.display = 'none';
+        });
+
+        // 点击编辑模态框外部关闭
+        window.addEventListener('click', function(e) {
+            if (e.target === editMealModal) {
+                editMealModal.style.display = 'none';
+            }
+        });
+
+        // 编辑表单提交
+        editMealForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const mealId = document.getElementById('edit-meal-id').value;
+            const platformId = document.getElementById('edit-meal-platform-id').value;
+            const mealName = document.getElementById('edit-meal-name').value;
+            const mealPrice = document.getElementById('edit-meal-price').value;
+            const mealType = document.getElementById('edit-meal-type').value;
+
+            // 显示加载状态
+            const submitBtn = editMealForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '更新中...';
+            submitBtn.disabled = true;
+
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求
+            fetch(`/merchant/edit-meal/${mealId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'platform-id': platformId,
+                    'meal-name': mealName,
+                    'meal-price': mealPrice,
+                    'meal-type': mealType
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 更新成功
+                    alert('餐品更新成功！');
+                    editMealModal.style.display = 'none';
+                    editMealForm.reset();
+
+                    // 不刷新页面，而是动态更新餐品表格
+                    updateMealsTable();
+                } else {
+                    // 更新失败
+                    alert('更新失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        // 删除餐品功能
+        function deleteMeal(mealId) {
+            if (!confirm('确定要删除这个餐品吗？此操作不可恢复。')) {
+                return;
+            }
+
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求
+            fetch(`/merchant/delete-meal/${mealId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 删除成功
+                    alert('餐品删除成功！');
+
+                    // 不刷新页面，而是动态更新餐品表格
+                    updateMealsTable();
+                } else {
+                    // 删除失败
+                    alert('删除失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            });
+        }
+
+        // 更新餐品表格的函数
+        function updateMealsTable() {
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求获取最新的餐品数据
+            fetch('/merchant/get-meals/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 更新表格内容
+                    const tableBody = document.getElementById('meals-table-body');
+                    tableBody.innerHTML = '';
+
+                    if (data.meals.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">暂无餐品，请添加</td></tr>';
+                    } else {
+                        data.meals.forEach(meal => {
+                            const row = document.createElement('tr');
+
+                            // 将英文类型转换为中文显示
+                            let typeDisplay = '';
+                            switch(meal.meal_type) {
+                                case 'breakfast': typeDisplay = '早餐'; break;
+                                case 'lunch': typeDisplay = '午餐'; break;
+                                case 'dinner': typeDisplay = '晚餐'; break;
+                                case 'lunch_and_dinner': typeDisplay = '午餐和晚餐'; break;
+                            }
+
+                            row.innerHTML = `
+                                <td>${meal.name}</td>
+                                <td>¥${meal.price}</td>
+                                <td>${typeDisplay}</td>
+                                <td>${meal.platform_name}</td>
+                                <td>${meal.created_at}</td>
+                                <td>
+                                    <button class="btn btn-secondary edit-meal-btn"
+                                            data-meal-id="${meal.id}"
+                                            style="padding: 4px 8px; margin-right: 5px;">
+                                        编辑
+                                    </button>
+                                    <button class="btn btn-secondary delete-meal-btn"
+                                            data-meal-id="${meal.id}"
+                                            style="padding: 4px 8px; background-color: rgba(248, 81, 73, 0.1); color: #f85149; border-color: #f85149;">
+                                        删除
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    }
+                } else {
+                    alert('获取餐品数据失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            });
+        }
+
+        // 折扣管理功能
+        // 设置折扣模态框
+        const setDiscountBtn = document.getElementById('set-discount-btn');
+        const setDiscountModal = document.getElementById('set-discount-modal');
+        const cancelDiscountBtn = document.getElementById('cancel-discount-btn');
+        const setDiscountForm = document.getElementById('set-discount-form');
+
+        setDiscountBtn.addEventListener('click', function() {
+            setDiscountModal.style.display = 'flex';
+        });
+
+        cancelDiscountBtn.addEventListener('click', function() {
+            setDiscountModal.style.display = 'none';
+        });
+
+        // 编辑折扣模态框
+        const editDiscountModal = document.getElementById('edit-discount-modal');
+        const cancelEditDiscountBtn = document.getElementById('cancel-edit-discount-btn');
+        const editDiscountForm = document.getElementById('edit-discount-form');
+
+        // 关闭折扣模态框
+        document.querySelectorAll('.close-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                setDiscountModal.style.display = 'none';
+                editDiscountModal.style.display = 'none';
+            });
+        });
+
+        // 点击模态框外部关闭
+        window.addEventListener('click', function(e) {
+            if (e.target === setDiscountModal) {
+                setDiscountModal.style.display = 'none';
+            }
+            if (e.target === editDiscountModal) {
+                editDiscountModal.style.display = 'none';
+            }
+        });
+
+        // 设置折扣表单提交
+        setDiscountForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const platformId = document.getElementById('discount-platform-id').value;
+            const discountId = document.getElementById('discount-id').value;
+
+            // 显示加载状态
+            const submitBtn = setDiscountForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '设置中...';
+            submitBtn.disabled = true;
+
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求
+            fetch('/merchant/set-discount/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'platform-id': platformId,
+                    'discount-id': discountId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('折扣设置成功！');
+                    setDiscountModal.style.display = 'none';
+                    setDiscountForm.reset();
+
+                    // 更新折扣表格
+                    updateDiscountsTable();
+                } else {
+                    alert('设置失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        // 编辑折扣功能
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('edit-discount-btn')) {
+                const discountId = e.target.getAttribute('data-discount-id');
+                const platformId = e.target.getAttribute('data-platform-id');
+                const currentDiscountId = e.target.getAttribute('data-current-discount-id');
+                const currentDiscountRate = e.target.getAttribute('data-discount-rate');
+                const platformName = e.target.closest('tr').cells[0].textContent;
+
+                openEditDiscountModal(discountId, platformId, platformName, currentDiscountId, currentDiscountRate);
+            }
+
+            if (e.target.classList.contains('delete-discount-btn')) {
+                const discountId = e.target.getAttribute('data-discount-id');
+                deleteDiscount(discountId);
+            }
+        });
+
+        // 打开编辑折扣模态框
+        function openEditDiscountModal(discountId, platformId, platformName, currentDiscountId, currentDiscountRate) {
+            document.getElementById('edit-discount-id').value = discountId;
+            document.getElementById('edit-discount-platform-id').value = platformId;
+            document.getElementById('edit-discount-platform-name').value = platformName;
+
+            // 设置当前选中的折扣
+            const discountSelect = document.getElementById('edit-discount-select');
+            for (let i = 0; i < discountSelect.options.length; i++) {
+                if (discountSelect.options[i].value === currentDiscountId) {
+                    discountSelect.selectedIndex = i;
+                    break;
+                }
+            }
+
+            editDiscountModal.style.display = 'flex';
+        }
+
+        // 编辑折扣表单提交
+        editDiscountForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const merchantDiscountId = document.getElementById('edit-discount-id').value;
+            const discountId = document.getElementById('edit-discount-select').value;
+
+            // 显示加载状态
+            const submitBtn = editDiscountForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '更新中...';
+            submitBtn.disabled = true;
+
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求
+            fetch(`/merchant/edit-discount/${merchantDiscountId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'discount-id': discountId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('折扣更新成功！');
+                    editDiscountModal.style.display = 'none';
+                    editDiscountForm.reset();
+
+                    // 更新折扣表格
+                    updateDiscountsTable();
+                } else {
+                    alert('更新失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        // 删除折扣功能
+        function deleteDiscount(discountId) {
+            if (!confirm('确定要删除这个折扣设置吗？')) {
+                return;
+            }
+
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求
+            fetch(`/merchant/delete-discount/${discountId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('折扣删除成功！');
+                    updateDiscountsTable();
+                } else {
+                    alert('删除失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            });
+        }
+
+        // 更新折扣表格的函数
+        function updateDiscountsTable() {
+            // 获取 CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 发送 AJAX 请求获取最新的折扣数据
+            fetch('/merchant/get-discounts/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const tableBody = document.getElementById('discounts-table-body');
+                    tableBody.innerHTML = '';
+
+                    if (data.discounts.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">暂无折扣设置</td></tr>';
+                    } else {
+                        data.discounts.forEach(discount => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${discount.platform_name}</td>
+                                <td>${discount.discount_rate}%</td>
+                                <td>${discount.updated_at}</td>
+                                <td>
+                                    <button class="btn btn-secondary edit-discount-btn"
+                                            data-discount-id="${discount.id}"
+                                            data-platform-id="${discount.platform_id}"
+                                            data-current-discount-id="${discount.discount_id}"
+                                            data-discount-rate="${discount.discount_rate}"
+                                            style="padding: 4px 8px; margin-right: 5px;">
+                                        修改
+                                    </button>
+                                    <button class="btn btn-secondary delete-discount-btn"
+                                            data-discount-id="${discount.id}"
+                                            style="padding: 4px 8px; background-color: rgba(248, 81, 73, 0.1); color: #f85149; border-color: #f85149;">
+                                        删除
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    }
+                } else {
+                    alert('获取折扣数据失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+            });
+        }
+
+        // 订单筛选
+        document.getElementById('filter-assigned').addEventListener('click', function() {
+            alert('显示已分配订单');
+        });
+
+        document.getElementById('filter-unassigned').addEventListener('click', function() {
+            alert('显示未分配订单');
+        });
+
+        document.getElementById('filter-all').addEventListener('click', function() {
+            alert('显示所有订单');
+        });
+
+        // 退出登录
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = '/login/';
+            }
+        });
+
+        // 平台入驻申请
+        document.querySelectorAll('.platform-card:not(.joined):not(.applied) .btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const platformId = this.getAttribute('data-platform-id');
+                const platformName = this.closest('.platform-card').querySelector('.platform-name').textContent;
+
+                if (confirm(`确定要申请入驻 ${platformName} 吗？`)) {
+                    // 显示加载状态
+                    const originalText = this.textContent;
+                    this.textContent = '申请中...';
+                    this.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                    // 发送 AJAX 请求
+                    fetch('/merchant/apply-platform/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'platform_id': platformId
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert(data.message);
+                            // 恢复按钮状态
+                            this.textContent = originalText;
+                            this.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试');
+                        // 恢复按钮状态
+                        this.textContent = originalText;
+                        this.disabled = false;
+                    });
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

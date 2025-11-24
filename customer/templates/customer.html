@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顾客中心 - SpeedEats</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 250px;
+            background-color: #161b22;
+            border-right: 1px solid #21262d;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+
+        .logo-icon::before {
+            content: "🍔";
+            font-size: 24px;
+            filter: grayscale(1) brightness(0.2);
+        }
+
+        .logo-text {
+            color: #ffc107;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .customer-info {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .customer-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .customer-status {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 5px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #c9d1d9;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .nav-link.active {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            border-left-color: #ffc107;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        /* 主内容区样式 */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 300;
+            color: #f0f6fc;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-name {
+            margin-right: 15px;
+        }
+
+        .logout-btn {
+            background-color: transparent;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(248, 81, 73, 0.1);
+            border-color: #f85149;
+            color: #f85149;
+        }
+
+        /* 内容卡片样式 */
+        .content-card {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            background-color: #ffc107;
+            color: #0d1117;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background-color: #ffca2c;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-danger {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+            border-color: #f85149;
+            padding: 4px 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            border: 1px solid;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(248, 81, 73, 0.2);
+        }
+
+        .btn-secondary {
+            background-color: #21262d;
+            color: #c9d1d9;
+            border-color: #30363d;
+            padding: 4px 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            border: 1px solid;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #30363d;
+        }
+
+        .btn-success {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+            border-color: #3fb950;
+            padding: 4px 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            border: 1px solid;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .btn-success:hover {
+            background-color: rgba(63, 185, 80, 0.2);
+        }
+
+        /* 搜索筛选样式 */
+        .search-filter {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .filter-input, .filter-select {
+            padding: 8px 12px;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-size: 14px;
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            border-color: #ffc107;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+        }
+
+        /* 商家卡片样式 */
+        .merchant-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 16px;
+        }
+
+        .merchant-card {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s;
+        }
+
+        .merchant-card:hover {
+            border-color: #ffc107;
+            transform: translateY(-2px);
+        }
+
+        .merchant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .merchant-name {
+            font-weight: 500;
+            color: #f0f6fc;
+            font-size: 16px;
+        }
+
+        .merchant-platforms {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .platform-tag {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .merchant-info-details {
+            margin-bottom: 12px;
+        }
+
+        .merchant-phone, .merchant-address {
+            font-size: 12px;
+            color: #8b949e;
+            margin-bottom: 4px;
+        }
+
+        .merchant-platforms-list {
+            margin-top: 12px;
+        }
+
+        .merchant-platform-item {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .merchant-platform-item:hover {
+            border-color: #ffc107;
+        }
+
+        .platform-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .platform-name {
+            font-weight: 500;
+            color: #ffc107;
+            font-size: 14px;
+        }
+
+        .platform-meal-count {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .merchant-meals {
+            margin-top: 8px;
+        }
+
+        .meal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .meal-item:last-child {
+            border-bottom: none;
+        }
+
+        .meal-name {
+            font-size: 14px;
+        }
+
+        .meal-price {
+            font-size: 14px;
+            color: #ffc107;
+        }
+
+        .meal-type {
+            font-size: 11px;
+            color: #8b949e;
+            margin-left: 8px;
+        }
+
+        /* 商家详情模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(13, 17, 23, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #f0f6fc;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #21262d;
+        }
+
+        .total-price {
+            font-size: 18px;
+            font-weight: 500;
+            color: #ffc107;
+        }
+
+        /* 餐品选择样式 */
+        .meal-selection {
+            margin-bottom: 20px;
+        }
+
+        .meal-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .meal-option:hover {
+            border-color: #ffc107;
+        }
+
+        .meal-option.selected {
+            border-color: #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
+        }
+
+        .meal-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .meal-checkbox {
+            width: 18px;
+            height: 18px;
+        }
+
+        .meal-details {
+            flex: 1;
+        }
+
+        .meal-quantity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quantity-btn {
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quantity-btn:hover {
+            background-color: #30363d;
+        }
+
+        .quantity-input {
+            width: 50px;
+            text-align: center;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #c9d1d9;
+            padding: 4px;
+        }
+
+        /* 折扣选择样式 */
+        .discount-selection {
+            margin-bottom: 20px;
+        }
+
+        .discount-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .discount-option {
+            padding: 8px 12px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .discount-option:hover {
+            border-color: #ffc107;
+        }
+
+        .discount-option.selected {
+            border-color: #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        /* 表格样式 */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #21262d;
+        }
+
+        th {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 193, 7, 0.05);
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-unassigned {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+        }
+
+        .status-assigned {
+            background-color: rgba(45, 164, 255, 0.1);
+            color: #2da4ff;
+        }
+
+        .status-ready {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        .status-completed {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        .status-cancelled {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar .logo-text,
+            .sidebar .customer-name,
+            .sidebar .customer-status,
+            .sidebar .nav-link span {
+                display: none;
+            }
+
+            .sidebar .logo {
+                padding: 0 10px 20px;
+            }
+
+            .sidebar .nav-link {
+                justify-content: center;
+                padding: 12px 10px;
+            }
+
+            .sidebar .nav-icon {
+                margin-right: 0;
+            }
+
+            .main-content {
+                margin-left: 70px;
+            }
+
+            .search-filter {
+                grid-template-columns: 1fr;
+            }
+
+            .merchant-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <form style="display: none;">{% csrf_token %}</form>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div class="logo-text">SpeedEats</div>
+            </div>
+
+            <div class="customer-info">
+                <div class="customer-name">{{ customer_name }}</div>
+                <div class="customer-status">顾客状态：正常</div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-target="order-section">
+                        <span class="nav-icon">🍔</span>
+                        <span>点餐下单</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="history-section">
+                        <span class="nav-icon">📦</span>
+                        <span>我的订单</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="header">
+                <h1 class="page-title">顾客中心</h1>
+                <div class="user-menu">
+                    <span class="user-name">{{ customer_name }}</span>
+                    <button class="logout-btn">退出登录</button>
+                </div>
+            </div>
+
+            <!-- 点餐下单部分 -->
+            <div id="order-section" class="content-section">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">商家列表</h2>
+                    </div>
+
+                    <!-- 搜索筛选 -->
+                    <div class="search-filter">
+                        <div class="filter-group">
+                            <label class="filter-label">平台</label>
+                            <select class="filter-select" id="platform-filter">
+                                <option value="">所有平台</option>
+                                {% for platform in platforms %}
+                                <option value="{{ platform.id }}">{{ platform.platform_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">商家名称</label>
+                            <input type="text" class="filter-input" id="merchant-filter" placeholder="搜索商家...">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">餐品名称</label>
+                            <input type="text" class="filter-input" id="meal-filter" placeholder="搜索餐品...">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">餐品类型</label>
+                            <select class="filter-select" id="meal-type-filter">
+                                <option value="">所有类型</option>
+                                <option value="breakfast">早餐</option>
+                                <option value="lunch">午餐</option>
+                                <option value="dinner">晚餐</option>
+                                <option value="lunch_and_dinner">午餐和晚餐</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 商家卡片 -->
+                    <div class="merchant-cards" id="merchant-cards-container">
+                        {% for merchant_data in merchants_with_platforms %}
+                        <div class="merchant-card">
+                            <div class="merchant-header">
+                                <div class="merchant-name">{{ merchant_data.merchant.merchant_name }}</div>
+                                <div class="merchant-platforms">
+                                    {% for platform in merchant_data.platforms %}
+                                    <span class="platform-tag">{{ platform.platform_name }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="merchant-info-details">
+                                <div class="merchant-phone">电话: {{ merchant_data.merchant.phone }}</div>
+                                <div class="merchant-address">地址: {{ merchant_data.merchant.address }}</div>
+                            </div>
+
+                            <div class="merchant-platforms-list">
+                                {% for platform_data in merchant_data.platforms_with_meals %}
+                                <div class="merchant-platform-item"
+                                     data-merchant-id="{{ merchant_data.merchant.id }}"
+                                     data-platform-id="{{ platform_data.platform.id }}">
+                                    <div class="platform-header">
+                                        <div class="platform-name">{{ platform_data.platform.platform_name }}</div>
+                                        <div class="platform-meal-count">{{ platform_data.meals_count }} 个餐品</div>
+                                    </div>
+                                    <div class="merchant-meals">
+                                        {% for meal in platform_data.meals|slice:":2" %}
+                                        <div class="meal-item">
+                                            <span class="meal-name">{{ meal.name }} <span class="meal-type">{{ meal.get_meal_type_display }}</span></span>
+                                            <span class="meal-price">¥{{ meal.price }}</span>
+                                        </div>
+                                        {% endfor %}
+                                        {% if platform_data.meals|length > 2 %}
+                                        <div style="text-align: center; color: #8b949e; font-size: 12px; margin-top: 4px;">
+                                            还有 {{ platform_data.meals|length|add:"-2" }} 个餐品...
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div style="text-align: center; color: #8b949e; padding: 40px;">
+                            暂无商家信息
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的订单部分 -->
+            <div id="history-section" class="content-section" style="display: none;">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">我的订单</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>订单号</th>
+                                    <th>商家</th>
+                                    <th>平台</th>
+                                    <th>餐品</th>
+                                    <th>总价</th>
+                                    <th>折扣</th>
+                                    <th>骑手</th>
+                                    <th>状态</th>
+                                    <th>下单时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-table-body">
+                                {% for order in orders %}
+                                <tr data-order-id="{{ order.id }}">
+                                    <td>#{{ order.id }}</td>
+                                    <td>{{ order.merchant.merchant_name }}</td>
+                                    <td>{{ order.platform.platform_name }}</td>
+                                    <td>{{ order.meal.name }}</td>
+                                    <td>¥{{ order.price }}</td>
+                                    <td>{% if order.discount %}{{ order.discount.discount_rate|floatformat:0 }}%{% else %}无{% endif %}</td>
+                                    <td>{% if order.rider %}{{ order.rider.rider_name }}{% else %}未分配{% endif %}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ order.status }}">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if order.status == 'ready' %}
+                                        <button class="btn btn-success pickup-order-btn" data-order-id="{{ order.id }}">
+                                            取餐
+                                        </button>
+                                        {% elif order.status in 'unassigned,cancelled' %}
+                                        <button class="btn btn-danger delete-order-btn" data-order-id="{{ order.id }}">
+                                            删除
+                                        </button>
+                                        {% else %}
+                                        <span style="color: #8b949e; font-size: 12px;">不可操作</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="10" style="text-align: center;">暂无订单记录</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商家详情模态框 -->
+    <div id="merchant-detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-merchant-name">商家详情</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 8px; color: #f0f6fc;">商家信息</h4>
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 14px;">
+                        <span style="color: #8b949e;">名称:</span>
+                        <span id="detail-merchant-name"></span>
+                        <span style="color: #8b949e;">电话:</span>
+                        <span id="detail-merchant-phone"></span>
+                        <span style="color: #8b949e;">平台:</span>
+                        <span id="detail-merchant-platform"></span>
+                        <span style="color: #8b949e;">地址:</span>
+                        <span id="detail-merchant-address"></span>
+                    </div>
+                </div>
+
+                <div class="meal-selection">
+                    <h4 style="margin-bottom: 12px; color: #f0f6fc;">选择餐品</h4>
+                    <div id="meal-options-container">
+                        <!-- 餐品选项将通过JavaScript动态加载 -->
+                    </div>
+                </div>
+
+                <div class="discount-selection">
+                    <h4 style="margin-bottom: 8px; color: #f0f6fc;">选择折扣</h4>
+                    <div class="discount-options" id="discount-options-container">
+                        <!-- 折扣选项将通过JavaScript动态加载 -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="total-price" id="total-price-display">
+                    总计: ¥0.00
+                </div>
+                <button class="btn" id="place-order-btn">确认下单</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 导航菜单切换
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // 更新活动菜单项
+            document.querySelectorAll('.nav-link').forEach(item => {
+                item.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            // 显示对应的内容区域
+            const targetId = this.getAttribute('data-target');
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(targetId).style.display = 'block';
+        });
+    });
+
+    // 获取 CSRF token 的函数
+    function getCSRFToken() {
+        const csrfTokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfTokenInput) {
+            return csrfTokenInput.value;
+        }
+        // 如果没有找到，尝试从 cookie 中获取
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // 全局变量存储当前选择的折扣和商家信息
+    let selectedDiscount = { id: '', rate: 0 };
+    let currentMerchantId = null;
+    let currentPlatformId = null;
+
+    // 商家平台条目点击事件
+    document.addEventListener('click', function(e) {
+        // 检查点击的是否是平台条目
+        const platformItem = e.target.closest('.merchant-platform-item');
+        if (platformItem) {
+            currentMerchantId = platformItem.getAttribute('data-merchant-id');
+            currentPlatformId = platformItem.getAttribute('data-platform-id');
+
+            console.log(`点击商家平台: merchant_id=${currentMerchantId}, platform_id=${currentPlatformId}`);
+
+            // 显示加载状态
+            const modal = document.getElementById('merchant-detail-modal');
+            modal.style.display = 'flex';
+
+            // 获取商家详情
+            fetch(`/customer/get-merchant-detail/${currentMerchantId}/${currentPlatformId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMerchantDetail(data);
+                    } else {
+                        alert('获取商家详情失败: ' + data.message);
+                        modal.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('网络错误，请重试');
+                    modal.style.display = 'none';
+                });
+        }
+    });
+
+    // 显示商家详情
+    function displayMerchantDetail(data) {
+        const merchant = data.merchant;
+        const platform = data.platform;
+        const meals = data.meals;
+        const availableDiscounts = data.available_discounts || [];
+
+        console.log(`显示商家详情: ${merchant.merchant_name}, 平台: ${platform.platform_name}, 餐品数量: ${meals.length}`);
+
+        // 更新商家信息
+        document.getElementById('modal-merchant-name').textContent = merchant.merchant_name;
+        document.getElementById('detail-merchant-name').textContent = merchant.merchant_name;
+        document.getElementById('detail-merchant-phone').textContent = merchant.phone;
+        document.getElementById('detail-merchant-platform').textContent = platform.platform_name;
+        document.getElementById('detail-merchant-address').textContent = merchant.address;
+
+        // 更新餐品选项
+        const mealContainer = document.getElementById('meal-options-container');
+        mealContainer.innerHTML = '';
+
+        if (meals.length === 0) {
+            mealContainer.innerHTML = '<div style="text-align: center; color: #8b949e; padding: 20px;">暂无餐品</div>';
+        } else {
+            meals.forEach(meal => {
+                const mealOption = document.createElement('div');
+                mealOption.className = 'meal-option';
+                mealOption.innerHTML = `
+                    <div class="meal-info">
+                        <input type="checkbox" class="meal-checkbox" data-meal-id="${meal.id}" data-meal-price="${meal.price}">
+                        <div class="meal-details">
+                            <div style="font-weight: 500;">${meal.name}</div>
+                            <div style="font-size: 12px; color: #8b949e;">${getMealTypeDisplay(meal.meal_type)}</div>
+                        </div>
+                    </div>
+                    <div class="meal-quantity">
+                        <button class="quantity-btn minus-btn" data-meal-id="${meal.id}">-</button>
+                        <input type="number" class="quantity-input" data-meal-id="${meal.id}" value="1" min="1" max="10">
+                        <button class="quantity-btn plus-btn" data-meal-id="${meal.id}">+</button>
+                        <div style="margin-left: 12px; color: #ffc107; font-weight: 500;">¥${meal.price}</div>
+                    </div>
+                `;
+                mealContainer.appendChild(mealOption);
+            });
+        }
+
+        // 更新折扣选项
+        const discountContainer = document.getElementById('discount-options-container');
+        discountContainer.innerHTML = '';
+
+        // 添加"无折扣"选项
+        const noDiscountOption = document.createElement('div');
+        noDiscountOption.className = 'discount-option selected';
+        noDiscountOption.setAttribute('data-discount-id', '');
+        noDiscountOption.setAttribute('data-discount-rate', '0');
+        noDiscountOption.textContent = '无折扣';
+        discountContainer.appendChild(noDiscountOption);
+
+        // 添加可用的折扣选项
+        availableDiscounts.forEach(discount => {
+            const discountOption = document.createElement('div');
+            discountOption.className = 'discount-option';
+            discountOption.setAttribute('data-discount-id', discount.id);
+            discountOption.setAttribute('data-discount-rate', discount.discount_rate);
+            discountOption.textContent = discount.discount_display;
+            discountContainer.appendChild(discountOption);
+        });
+
+        // 重置总价和折扣选择
+        selectedDiscount = { id: '', rate: 0 };
+        updateTotalPrice();
+
+        // 添加餐品选择事件
+        document.querySelectorAll('.meal-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const mealOption = this.closest('.meal-option');
+                if (this.checked) {
+                    mealOption.classList.add('selected');
+                } else {
+                    mealOption.classList.remove('selected');
+                }
+                updateTotalPrice();
+            });
+        });
+
+        // 添加数量按钮事件
+        document.querySelectorAll('.plus-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const mealId = this.getAttribute('data-meal-id');
+                const input = document.querySelector(`.quantity-input[data-meal-id="${mealId}"]`);
+                input.value = parseInt(input.value) + 1;
+                updateTotalPrice();
+            });
+        });
+
+        document.querySelectorAll('.minus-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const mealId = this.getAttribute('data-meal-id');
+                const input = document.querySelector(`.quantity-input[data-meal-id="${mealId}"]`);
+                if (parseInt(input.value) > 1) {
+                    input.value = parseInt(input.value) - 1;
+                    updateTotalPrice();
+                }
+            });
+        });
+
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('change', updateTotalPrice);
+        });
+
+        // 重新绑定折扣选择事件
+        document.querySelectorAll('.discount-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.discount-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                this.classList.add('selected');
+
+                const discountId = this.getAttribute('data-discount-id');
+                const discountRate = this.getAttribute('data-discount-rate');
+
+                selectedDiscount = {
+                    id: discountId === '' ? '' : discountId,
+                    rate: parseFloat(discountRate) || 0
+                };
+                updateTotalPrice();
+            });
+        });
+    }
+
+    // 获取餐品类型显示文本
+    function getMealTypeDisplay(mealType) {
+        const typeMap = {
+            'breakfast': '早餐',
+            'lunch': '午餐',
+            'dinner': '晚餐',
+            'lunch_and_dinner': '午餐和晚餐'
+        };
+        return typeMap[mealType] || mealType;
+    }
+
+    // 更新总价
+    function updateTotalPrice() {
+        let total = 0;
+
+        // 计算选中餐品的总价
+        document.querySelectorAll('.meal-checkbox:checked').forEach(checkbox => {
+            const mealId = checkbox.getAttribute('data-meal-id');
+            const mealPrice = parseFloat(checkbox.getAttribute('data-meal-price'));
+            const quantityInput = document.querySelector(`.quantity-input[data-meal-id="${mealId}"]`);
+            const quantity = parseInt(quantityInput.value) || 1;
+
+            total += mealPrice * quantity;
+        });
+
+        // 应用折扣 - 修正：折扣率 0.3 表示减免30%，即支付70%
+        if (selectedDiscount.rate > 0) {
+            total = total * (1 - selectedDiscount.rate);
+        }
+
+        // 更新显示
+        document.getElementById('total-price-display').textContent = `总计: ¥${total.toFixed(2)}`;
+    }
+
+    // 关闭模态框
+    document.querySelector('.close-btn').addEventListener('click', function() {
+        document.getElementById('merchant-detail-modal').style.display = 'none';
+    });
+
+    // 点击模态框外部关闭
+    window.addEventListener('click', function(e) {
+        const modal = document.getElementById('merchant-detail-modal');
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // 下单功能
+    document.getElementById('place-order-btn').addEventListener('click', function() {
+        const selectedMeals = [];
+
+        // 获取选中的餐品
+        document.querySelectorAll('.meal-checkbox:checked').forEach(checkbox => {
+            const mealId = checkbox.getAttribute('data-meal-id');
+            const quantityInput = document.querySelector(`.quantity-input[data-meal-id="${mealId}"]`);
+            const quantity = parseInt(quantityInput.value) || 1;
+
+            selectedMeals.push({
+                meal_id: mealId,
+                quantity: quantity
+            });
+        });
+
+        if (selectedMeals.length === 0) {
+            alert('请至少选择一个餐品');
+            return;
+        }
+
+        // 获取商家和平台信息
+        const merchantName = document.getElementById('detail-merchant-name').textContent;
+        const platformName = document.getElementById('detail-merchant-platform').textContent;
+
+        // 计算总价
+        const totalPrice = parseFloat(document.getElementById('total-price-display').textContent.replace('总计: ¥', ''));
+
+        console.log(`下单数据: merchant_id=${currentMerchantId}, platform_id=${currentPlatformId}, meals=`, selectedMeals);
+
+        if (confirm(`确认向 ${merchantName} (${platformName}) 下单吗？总金额: ¥${totalPrice.toFixed(2)}`)) {
+            // 显示加载状态
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.textContent = '下单中...';
+            btn.disabled = true;
+
+            // 获取 CSRF token
+            const csrfToken = getCSRFToken();
+
+            // 发送下单请求
+            fetch('/customer/place-order/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    merchant_id: currentMerchantId,
+                    platform_id: currentPlatformId,
+                    meals: selectedMeals,
+                    discount_id: selectedDiscount.id,
+                    total_price: totalPrice
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('下单成功！');
+                    document.getElementById('merchant-detail-modal').style.display = 'none';
+                    // 刷新订单列表
+                    loadOrders();
+                } else {
+                    alert('下单失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试');
+            })
+            .finally(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        }
+    });
+
+    // 搜索筛选功能
+    function setupSearchFilters() {
+        const filters = ['platform-filter', 'merchant-filter', 'meal-filter', 'meal-type-filter'];
+
+        filters.forEach(filterId => {
+            document.getElementById(filterId).addEventListener('input', function() {
+                // 使用防抖处理，避免频繁请求
+                clearTimeout(window.searchTimeout);
+                window.searchTimeout = setTimeout(() => {
+                    searchMerchants();
+                }, 300);
+            });
+        });
+    }
+
+    // 搜索商家 - 调用后端API
+    function searchMerchants() {
+        const platformFilter = document.getElementById('platform-filter').value;
+        const merchantFilter = document.getElementById('merchant-filter').value;
+        const mealFilter = document.getElementById('meal-filter').value;
+        const mealTypeFilter = document.getElementById('meal-type-filter').value;
+
+        // 构建查询参数
+        const params = new URLSearchParams();
+        if (platformFilter) params.append('platform_id', platformFilter);
+        if (merchantFilter) params.append('merchant_name', merchantFilter);
+        if (mealFilter) params.append('meal_name', mealFilter);
+        if (mealTypeFilter) params.append('meal_type', mealTypeFilter);
+
+        // 显示加载状态
+        const container = document.getElementById('merchant-cards-container');
+        container.innerHTML = '<div style="text-align: center; color: #8b949e; padding: 40px;">搜索中...</div>';
+
+        // 调用搜索API
+        fetch(`/customer/search-merchants/?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateMerchantCards(data.merchants);
+                } else {
+                    container.innerHTML = '<div style="text-align: center; color: #f85149; padding: 40px;">搜索失败: ' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                container.innerHTML = '<div style="text-align: center; color: #f85149; padding: 40px;">网络错误，请重试</div>';
+            });
+    }
+
+    // 更新商家卡片显示
+    function updateMerchantCards(merchants) {
+        const container = document.getElementById('merchant-cards-container');
+
+        if (merchants.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #8b949e; padding: 40px;">暂无商家信息</div>';
+            return;
+        }
+
+        let html = '';
+        merchants.forEach(merchantData => {
+            const merchant = merchantData.merchant;
+            const platformsWithMeals = merchantData.platforms_with_meals;
+
+            // 收集所有平台用于显示标签
+            const allPlatforms = platformsWithMeals.map(p => p.platform);
+
+            html += `
+                <div class="merchant-card">
+                    <div class="merchant-header">
+                        <div class="merchant-name">${merchant.merchant_name}</div>
+                        <div class="merchant-platforms">
+                            ${allPlatforms.map(platform =>
+                                `<span class="platform-tag">${platform.platform_name}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    <div class="merchant-info-details">
+                        <div class="merchant-phone">电话: ${merchant.phone}</div>
+                        <div class="merchant-address">地址: ${merchant.address}</div>
+                    </div>
+
+                    <div class="merchant-platforms-list">
+                        ${platformsWithMeals.map(platformData => `
+                            <div class="merchant-platform-item"
+                                 data-merchant-id="${merchant.id}"
+                                 data-platform-id="${platformData.platform.id}">
+                                <div class="platform-header">
+                                    <div class="platform-name">${platformData.platform.platform_name}</div>
+                                    <div class="platform-meal-count">${platformData.meals_count} 个餐品</div>
+                                </div>
+                                <div class="merchant-meals">
+                                    ${platformData.meals.slice(0, 2).map(meal => `
+                                        <div class="meal-item">
+                                            <span class="meal-name">${meal.name} <span class="meal-type">${getMealTypeDisplay(meal.meal_type)}</span></span>
+                                            <span class="meal-price">¥${meal.price}</span>
+                                        </div>
+                                    `).join('')}
+                                    ${platformData.meals.length > 2 ? `
+                                        <div style="text-align: center; color: #8b949e; font-size: 12px; margin-top: 4px;">
+                                            还有 ${platformData.meals.length - 2} 个餐品...
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // 加载订单列表
+    function loadOrders() {
+        fetch('/customer/get-orders/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateOrdersTable(data.orders);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading orders:', error);
+            });
+    }
+
+    // 更新订单表格
+    function updateOrdersTable(orders) {
+        const tableBody = document.getElementById('orders-table-body');
+
+        if (orders.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="10" style="text-align: center;">暂无订单记录</td></tr>';
+            return;
+        }
+
+        let html = '';
+        orders.forEach(order => {
+            const statusClass = `status-${order.status}`;
+            const statusDisplay = getStatusDisplay(order.status);
+            const discountDisplay = order.discount_id ? `${order.discount_rate}%` : '无';
+            const riderDisplay = order.rider_name || '-';
+
+            // 根据订单状态显示不同的操作按钮
+            let actionButton = '';
+            if (order.status === 'ready') {
+                // 待取餐状态显示取餐按钮
+                actionButton = `<button class="btn btn-success pickup-order-btn" data-order-id="${order.id}">取餐</button>`;
+            } else if (order.status === 'unassigned' || order.status === 'cancelled') {
+                // 未分配或已取消状态显示删除按钮
+                actionButton = `<button class="btn btn-danger delete-order-btn" data-order-id="${order.id}">删除</button>`;
+            } else {
+                // 其他状态显示不可操作
+                actionButton = '<span style="color: #8b949e; font-size: 12px;">不可操作</span>';
+            }
+
+            html += `
+                <tr data-order-id="${order.id}">
+                    <td>#${order.id}</td>
+                    <td>${order.merchant_name}</td>
+                    <td>${order.platform_name}</td>
+                    <td>${order.meal_name}</td>
+                    <td>¥${order.price}</td>
+                    <td>${discountDisplay}</td>
+                    <td>${riderDisplay}</td>
+                    <td>
+                        <span class="status-badge ${statusClass}">${statusDisplay}</span>
+                    </td>
+                    <td>${order.created_at}</td>
+                    <td>${actionButton}</td>
+                </tr>
+            `;
+        });
+
+        tableBody.innerHTML = html;
+    }
+
+    // 获取状态显示文本
+    function getStatusDisplay(status) {
+        const statusMap = {
+            'unassigned': '未分配骑手',
+            'assigned': '已分配骑手',
+            'ready': '顾客待取餐',
+            'completed': '已完成',
+            'cancelled': '已取消'
+        };
+        return statusMap[status] || status;
+    }
+
+    // 删除订单功能
+    function setupDeleteOrderHandlers() {
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-order-btn')) {
+                const orderId = e.target.getAttribute('data-order-id');
+                deleteOrder(orderId);
+            }
+        });
+    }
+
+    // 删除订单
+    function deleteOrder(orderId) {
+        if (!confirm('确定要删除这个订单吗？此操作不可恢复。')) {
+            return;
+        }
+
+        // 获取 CSRF token
+        const csrfToken = getCSRFToken();
+
+        // 发送删除请求
+        fetch(`/customer/delete-order/${orderId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('订单删除成功');
+                // 从表格中移除该行
+                const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+                if (row) {
+                    row.remove();
+                }
+                // 重新加载订单列表以确保数据同步
+                loadOrders();
+            } else {
+                alert('删除失败: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('网络错误，请重试');
+        });
+    }
+
+    // 取餐功能
+    function setupPickupOrderHandlers() {
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('pickup-order-btn')) {
+                const orderId = e.target.getAttribute('data-order-id');
+                pickupOrder(orderId);
+            }
+        });
+    }
+
+    // 取餐操作
+    function pickupOrder(orderId) {
+        if (!confirm('确定要取餐吗？取餐后订单将被删除。')) {
+            return;
+        }
+
+        // 获取 CSRF token
+        const csrfToken = getCSRFToken();
+
+        // 发送取餐请求
+        fetch(`/customer/pickup-order/${orderId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('取餐成功！订单已删除。');
+                // 从表格中移除该行
+                const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+                if (row) {
+                    row.remove();
+                }
+                // 重新加载订单列表以确保数据同步
+                loadOrders();
+            } else {
+                alert('取餐失败: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('网络错误，请重试');
+        });
+    }
+
+    // 退出登录
+    document.querySelector('.logout-btn').addEventListener('click', function() {
+        if (confirm('确定要退出登录吗？')) {
+            window.location.href = '/login/';
+        }
+    });
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        setupSearchFilters();
+        loadOrders();
+        setupDeleteOrderHandlers();
+        setupPickupOrderHandlers();
+    });
+    </script>
+</body>
+</html>

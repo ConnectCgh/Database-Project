@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>骑手中心 - SpeedEats</title>
+    <style>
+        /* 保持原有的所有CSS样式不变 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 250px;
+            background-color: #161b22;
+            border-right: 1px solid #21262d;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+
+        .logo-icon::before {
+            content: "🍔";
+            font-size: 24px;
+            filter: grayscale(1) brightness(0.2);
+        }
+
+        .logo-text {
+            color: #ffc107;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .rider-info {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 20px;
+        }
+
+        .rider-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .rider-status {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 5px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #c9d1d9;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .nav-link.active {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            border-left-color: #ffc107;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        /* 主内容区样式 */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 300;
+            color: #f0f6fc;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-name {
+            margin-right: 15px;
+        }
+
+        .logout-btn {
+            background-color: transparent;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(248, 81, 73, 0.1);
+            border-color: #f85149;
+            color: #f85149;
+        }
+
+        /* 内容卡片样式 */
+        .content-card {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            background-color: #ffc107;
+            color: #0d1117;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background-color: #ffca2c;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #21262d;
+            color: #c9d1d9;
+            border-color: #30363d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #30363d;
+            box-shadow: 0 0 8px rgba(48, 54, 61, 0.4);
+        }
+
+        .btn-success {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+            border-color: #3fb950;
+        }
+
+        .btn-success:hover {
+            background-color: rgba(63, 185, 80, 0.2);
+        }
+
+        .btn-danger {
+            background-color: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+            border-color: #f85149;
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(248, 81, 73, 0.2);
+        }
+
+        /* 表格样式 */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #21262d;
+        }
+
+        th {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 193, 7, 0.05);
+        }
+
+        /* 平台卡片 */
+        .platform-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .platform-card {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s;
+        }
+
+        .platform-card:hover {
+            border-color: #ffc107;
+        }
+
+        .platform-card.signed {
+            border-color: #3fb950;
+        }
+
+        .platform-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .platform-name {
+            font-weight: 500;
+            color: #f0f6fc;
+        }
+
+        .platform-status {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .platform-status.signed {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        .platform-status.not-signed {
+            background-color: rgba(139, 148, 158, 0.1);
+            color: #8b949e;
+        }
+
+        .platform-phone {
+            font-size: 12px;
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+
+        .platform-status.applied {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .platform-card.applied {
+            border-color: #ffc107;
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-unassigned {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .status-assigned {
+            background-color: rgba(63, 185, 80, 0.1);
+            color: #3fb950;
+        }
+
+        .status-ready {
+            background-color: rgba(56, 139, 253, 0.1);
+            color: #388bfd;
+        }
+
+        .status-completed {
+            background-color: rgba(139, 148, 158, 0.1);
+            color: #8b949e;
+        }
+
+<!--        .btn-accept {-->
+<!--            background-color: #ffc107;-->
+<!--            color: #0d1117;-->
+<!--            border: 1px solid rgba(255, 193, 7, 0.3);-->
+<!--        }-->
+
+        .btn-accept {
+            background-color: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+            border-color: #ffc107;
+        }
+
+        .btn-accept:hover {
+            background-color: rgba(255, 193, 7, 0.3);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar .logo-text,
+            .sidebar .rider-name,
+            .sidebar .rider-status,
+            .sidebar .nav-link span {
+                display: none;
+            }
+
+            .sidebar .logo {
+                padding: 0 10px 20px;
+            }
+
+            .sidebar .nav-link {
+                justify-content: center;
+                padding: 12px 10px;
+            }
+
+            .sidebar .nav-icon {
+                margin-right: 0;
+            }
+
+            .main-content {
+                margin-left: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 添加 CSRF token -->
+    <form style="display: none;">{% csrf_token %}</form>
+
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div class="logo-text">SpeedEats</div>
+            </div>
+
+            <div class="rider-info">
+                <div class="rider-name">{{ rider_name }}</div>
+                <div class="rider-status">骑手状态：正常</div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-target="platform-section">
+                        <span class="nav-icon">🏪</span>
+                        <span>签约平台</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-target="order-section">
+                        <span class="nav-icon">📦</span>
+                        <span>管理订单</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="header">
+                <h1 class="page-title">骑手管理中心</h1>
+                <div class="user-menu">
+                    <span class="user-name">{{ rider_name }}</span>
+                    <button class="logout-btn">退出登录</button>
+                </div>
+            </div>
+
+            <!-- 签约平台部分 -->
+            <div id="platform-section" class="content-section">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">签约平台</h2>
+                    </div>
+
+                    <div class="platform-cards">
+                       <!-- 已签约平台 -->
+                        {% for platform in signed_platforms %}
+                        <div class="platform-card signed">
+                            <div class="platform-header">
+                                <div class="platform-name">{{ platform.platform_name }}</div>
+                                <div class="platform-status signed">已签约</div>
+                            </div>
+                            <div class="platform-phone">电话: {{ platform.phone }}</div>
+                            <button class="btn btn-secondary" style="width: 100%;">查看详情</button>
+                        </div>
+                        {% endfor %}
+
+                        <!-- 已申请平台 -->
+                        {% for platform in applied_platforms %}
+                        <div class="platform-card applied">
+                            <div class="platform-header">
+                                <div class="platform-name">{{ platform.platform_name }}</div>
+                                <div class="platform-status applied">审核中</div>
+                            </div>
+                            <div class="platform-phone">电话: {{ platform.phone }}</div>
+                            <button class="btn btn-secondary" style="width: 100%;" disabled>审核中</button>
+                        </div>
+                        {% endfor %}
+
+                        <!-- 未申请平台 -->
+                        {% for platform in not_signed_platforms %}
+                        <div class="platform-card">
+                            <div class="platform-header">
+                                <div class="platform-name">{{ platform.platform_name }}</div>
+                                <div class="platform-status not-signed">未签约</div>
+                            </div>
+                            <div class="platform-phone">电话: {{ platform.phone }}</div>
+                            <button class="btn sign-platform-btn" style="width: 100%;" data-platform-id="{{ platform.id }}">
+                                申请签约
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 管理订单部分 -->
+            <div id="order-section" class="content-section" style="display: none;">
+                <!-- 待接订单 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">待接订单</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>商家</th>
+                                    <th>顾客</th>
+                                    <th>总价格</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for group in unassigned_order_groups %}
+                                <tr>
+                                    <td>{{ group.merchant__merchant_name }}</td>
+                                    <td>{{ group.customer__customer_name }}</td>
+                                    <td>¥{{ group.total_price }}</td>
+                                    <td><span class="status-badge status-unassigned">待接单</span></td>
+                                    <!-- 待接订单部分 -->
+                                    <td>
+                                        <button class="btn btn-accept accept-orders-btn"
+                                                style="padding: 4px 8px;"
+                                                data-merchant-id="{{ group.merchant_id }}"
+                                                data-customer-id="{{ group.customer_id }}">
+                                            接单
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center;">暂无待接订单</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 已接收订单 -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">已接收订单</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>商家</th>
+                                    <th>顾客</th>
+                                    <th>总价格</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for group in accepted_order_groups %}
+                                <tr>
+                                    <td>{{ group.merchant__merchant_name }}</td>
+                                    <td>{{ group.customer__customer_name }}</td>
+                                    <td>¥{{ group.total_price }}</td>
+                                    <td>
+                                        <span class="status-badge status-assigned">已接单</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-success complete-orders-btn"
+                                                style="padding: 4px 8px; margin-right: 5px;"
+                                                data-merchant-id="{{ group.merchant_id }}"
+                                                data-customer-id="{{ group.customer_id }}">
+                                            完成
+                                        </button>
+                                        <button class="btn btn-danger cancel-orders-btn"
+                                                style="padding: 4px 8px;"
+                                                data-merchant-id="{{ group.merchant_id }}"
+                                                data-customer-id="{{ group.customer_id }}">
+                                            取消
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center;">暂无已接收订单</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 导航菜单切换
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // 更新活动菜单项
+                document.querySelectorAll('.nav-link').forEach(item => {
+                    item.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                // 显示对应的内容区域
+                const targetId = this.getAttribute('data-target');
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+                document.getElementById(targetId).style.display = 'block';
+            });
+        });
+
+        // 获取 CSRF token 的函数
+        function getCSRFToken() {
+            const csrfTokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfTokenInput) {
+                return csrfTokenInput.value;
+            }
+            return null;
+        }
+
+        // 平台签约申请
+        document.querySelectorAll('.sign-platform-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const platformId = this.getAttribute('data-platform-id');
+                const platformName = this.closest('.platform-card').querySelector('.platform-name').textContent;
+
+                if (confirm(`确定要申请签约 ${platformName} 吗？`)) {
+                    // 显示加载状态
+                    const originalText = this.textContent;
+                    this.textContent = '申请中...';
+                    this.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/rider/apply-platform/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'platform_id': platformId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('网络响应不正常');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 刷新页面
+                            location.reload();
+                        } else {
+                            alert(data.message);
+                            // 恢复按钮状态
+                            this.textContent = originalText;
+                            this.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        this.textContent = originalText;
+                        this.disabled = false;
+                    });
+                }
+            });
+        });
+
+        // 将订单移动到已接收订单列表
+        function moveToAcceptedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice) {
+            // 从待接订单列表移除
+            row.remove();
+
+            // 获取已接收订单表格的tbody
+            const acceptedTable = document.querySelector('#order-section .content-card:last-child table tbody');
+
+            // 检查是否显示"暂无已接收订单"的提示行
+            if (acceptedTable.children.length === 1 && acceptedTable.children[0].textContent.includes('暂无')) {
+                acceptedTable.innerHTML = ''; // 清空提示行
+            }
+
+            // 创建新的已接收订单行
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${merchantName}</td>
+                <td>${customerName}</td>
+                <td>${totalPrice}</td>
+                <td><span class="status-badge status-assigned">已接单</span></td>
+                <td>
+                    <button class="btn btn-success complete-orders-btn"
+                            style="padding: 4px 8px; margin-right: 5px;"
+                            data-merchant-id="${merchantId}"
+                            data-customer-id="${customerId}">
+                        完成
+                    </button>
+                    <button class="btn btn-danger cancel-orders-btn"
+                            style="padding: 4px 8px;"
+                            data-merchant-id="${merchantId}"
+                            data-customer-id="${customerId}">
+                        取消
+                    </button>
+                </td>
+            `;
+
+            // 添加到已接收订单列表
+            acceptedTable.appendChild(newRow);
+        }
+
+        // 将订单移动到待接订单列表
+        function moveToUnassignedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice) {
+            // 从已接收订单列表移除
+            row.remove();
+
+            // 获取待接订单表格的tbody
+            const unassignedTable = document.querySelector('#order-section .content-card:first-child table tbody');
+
+            // 检查是否显示"暂无待接订单"的提示行
+            if (unassignedTable.children.length === 1 && unassignedTable.children[0].textContent.includes('暂无')) {
+                unassignedTable.innerHTML = ''; // 清空提示行
+            }
+
+            // 创建新的待接订单行
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${merchantName}</td>
+                <td>${customerName}</td>
+                <td>${totalPrice}</td>
+                <td><span class="status-badge status-unassigned">待接单</span></td>
+                <td>
+                    <button class="btn btn-accept accept-orders-btn"
+                            style="padding: 4px 8px;"
+                            data-merchant-id="${merchantId}"
+                            data-customer-id="${customerId}">
+                        接单
+                    </button>
+                </td>
+            `;
+
+            // 添加到待接订单列表
+            unassignedTable.appendChild(newRow);
+        }
+
+
+        // 接单功能（批量）
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('accept-orders-btn')) {
+                const merchantId = e.target.getAttribute('data-merchant-id');
+                const customerId = e.target.getAttribute('data-customer-id');
+                const merchantName = e.target.closest('tr').querySelector('td:nth-child(1)').textContent;
+                const customerName = e.target.closest('tr').querySelector('td:nth-child(2)').textContent;
+                const totalPrice = e.target.closest('tr').querySelector('td:nth-child(3)').textContent;
+                const row = e.target.closest('tr'); // 保存行引用
+
+                if (confirm(`确定要接取 ${merchantName} 给 ${customerName} 的所有订单吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '接单中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/rider/accept-orders/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'merchant_id': merchantId,
+                            'customer_id': customerId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(`HTTP ${response.status}: ${text}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 将订单移动到已接收订单列表
+                            moveToAcceptedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice);
+
+                            // 如果没有更多待接订单，显示提示
+                            const unassignedTable = document.querySelector('#order-section .content-card:first-child table tbody');
+                            if (unassignedTable && unassignedTable.children.length === 1 && unassignedTable.children[0].textContent.includes('暂无')) {
+                                // 如果只剩提示行，保持显示
+                            } else if (unassignedTable && unassignedTable.children.length === 0) {
+                                unassignedTable.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无待接订单</td></tr>';
+                            }
+                        } else {
+                            alert('接单失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+
+            // 取消订单功能（批量）
+            if (e.target.classList.contains('cancel-orders-btn')) {
+                const merchantId = e.target.getAttribute('data-merchant-id');
+                const customerId = e.target.getAttribute('data-customer-id');
+                const merchantName = e.target.closest('tr').querySelector('td:nth-child(1)').textContent;
+                const customerName = e.target.closest('tr').querySelector('td:nth-child(2)').textContent;
+                const totalPrice = e.target.closest('tr').querySelector('td:nth-child(3)').textContent;
+                const row = e.target.closest('tr'); // 保存行引用
+
+                if (confirm(`确定要取消 ${merchantName} 给 ${customerName} 的所有订单吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '取消中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/rider/cancel-orders/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'merchant_id': merchantId,
+                            'customer_id': customerId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(`HTTP ${response.status}: ${text}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 将订单移动到待接订单列表
+                            moveToUnassignedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice);
+
+                            // 如果没有更多已接收订单，显示提示
+                            const acceptedTable = document.querySelector('#order-section .content-card:last-child table tbody');
+                            if (acceptedTable && acceptedTable.children.length === 1 && acceptedTable.children[0].textContent.includes('暂无')) {
+                                // 如果只剩提示行，保持显示
+                            } else if (acceptedTable && acceptedTable.children.length === 0) {
+                                acceptedTable.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无已接收订单</td></tr>';
+                            }
+                        } else {
+                            alert('取消订单失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+
+            // 完成订单功能（批量）
+            if (e.target.classList.contains('complete-orders-btn')) {
+                const merchantId = e.target.getAttribute('data-merchant-id');
+                const customerId = e.target.getAttribute('data-customer-id');
+                const merchantName = e.target.closest('tr').querySelector('td:nth-child(1)').textContent;
+                const customerName = e.target.closest('tr').querySelector('td:nth-child(2)').textContent;
+                const row = e.target.closest('tr'); // 保存行引用
+
+                if (confirm(`确定要完成 ${merchantName} 给 ${customerName} 的所有订单吗？`)) {
+                    // 显示加载状态
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '处理中...';
+                    e.target.disabled = true;
+
+                    // 获取 CSRF token
+                    const csrfToken = getCSRFToken();
+
+                    // 发送 AJAX 请求
+                    fetch('/rider/complete-orders/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: new URLSearchParams({
+                            'merchant_id': merchantId,
+                            'customer_id': customerId
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(`HTTP ${response.status}: ${text}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // 移除已完成的订单
+                            row.remove();
+
+                            // 如果没有更多已接收订单，显示提示
+                            const acceptedTable = document.querySelector('#order-section .content-card:last-child table tbody');
+                            if (acceptedTable && acceptedTable.children.length === 1 && acceptedTable.children[0].textContent.includes('暂无')) {
+                                // 如果只剩提示行，保持显示
+                            } else if (acceptedTable && acceptedTable.children.length === 0) {
+                                acceptedTable.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无已接收订单</td></tr>';
+                            }
+                        } else {
+                            alert('操作失败: ' + data.message);
+                            // 恢复按钮状态
+                            e.target.textContent = originalText;
+                            e.target.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('网络错误，请重试: ' + error.message);
+                        // 恢复按钮状态
+                        e.target.textContent = originalText;
+                        e.target.disabled = false;
+                    });
+                }
+            }
+        });
+
+        // 退出登录
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = '/login/';
+            }
+        });
+    </script>
+</body>
+</html>
