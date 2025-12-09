@@ -30,3 +30,17 @@ class Order(models.Model):
 
     def __str__(self):
         return f"订单 {self.id} - {self.customer.customer_name} - ¥{self.price}"
+
+
+class OrderRating(models.Model):
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='rating')
+    merchant_rating = models.DecimalField(max_digits=3, decimal_places=2)
+    meal_rating = models.DecimalField(max_digits=3, decimal_places=2)
+    platform_rating = models.DecimalField(max_digits=3, decimal_places=2)
+    rider_rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'order_rating'
+        verbose_name = '订单评分'
+        verbose_name_plural = '订单评分'

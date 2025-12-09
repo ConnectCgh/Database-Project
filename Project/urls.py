@@ -36,6 +36,7 @@ urlpatterns = [
     path("customer/search-merchants/", customer_views.search_merchants, name="search_merchants"),
     path("customer/delete-order/<int:order_id>/", customer_views.delete_order, name="delete_order"),
     path("customer/pickup-order/<int:order_id>/", customer_views.pickup_order, name="pickup_order"),
+    path("customer/rate-order/<int:order_id>/", customer_views.rate_order, name="rate_order"),
     path("rider/", rider_views.rider, name="rider"),
     path("rider/apply-platform/", rider_views.apply_platform, name="apply_platform"),
     path("rider/accept-orders/", rider_views.accept_orders, name="accept_orders"),

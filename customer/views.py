@@ -1,5 +1,5 @@
 import json
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -33,20 +33,64 @@ ORDER_STATUS_DISPLAY = {
 
 PLATFORM_TABLE = quote_table('platform')
 ORDER_TABLE = quote_table('order')
+ORDER_RATING_TABLE = quote_table('order_rating')
+MERCHANT_TABLE = quote_table('merchant')
+MEAL_TABLE = quote_table('meal')
+RIDER_TABLE = quote_table('rider')
+
+
+def _format_decimal(value):
+    if value is None:
+        return '0.00'
+    return str(Decimal(value).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+
+
+def _normalize_rating(value):
+    if value is None or value == '':
+        raise ValueError('评分不能为空')
+    rating = Decimal(str(value))
+    if rating < Decimal('0') or rating > Decimal('5'):
+        raise ValueError('评分必须在0到5之间')
+    return rating.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+def _update_entity_rating(table_name, entity_id, rating_value):
+    if not entity_id:
+        return
+    query = f'''
+        UPDATE {table_name}
+        SET rating_score = ROUND(((rating_score * rating_count) + %s) / (rating_count + 1), 2),
+            rating_count = rating_count + 1
+        WHERE id = %s
+    '''
+    execute_non_query(query, [rating_value, entity_id])
 
 
 def _get_platforms():
-    query = f'SELECT id, platform_name, phone FROM {PLATFORM_TABLE} ORDER BY platform_name'
+    query = f'''
+        SELECT id, platform_name, phone, rating_score, rating_count
+        FROM {PLATFORM_TABLE}
+        ORDER BY platform_name
+    '''
     return execute_fetchall(query)
 
 
 def _get_all_merchants():
-    return execute_fetchall('SELECT id, merchant_name, phone, address FROM merchant ORDER BY merchant_name')
+    query = f'''
+        SELECT id, merchant_name, phone, address, rating_score, rating_count
+        FROM {MERCHANT_TABLE}
+        ORDER BY merchant_name
+    '''
+    return execute_fetchall(query)
 
 
 def _get_platforms_for_merchant(merchant_id):
     query = f'''
-        SELECT p.id AS platform_id, p.platform_name, p.phone
+        SELECT p.id AS platform_id,
+               p.platform_name,
+               p.phone,
+               p.rating_score,
+               p.rating_count
         FROM enter_request er
         JOIN {PLATFORM_TABLE} p ON er.platform_id = p.id
         WHERE er.merchant_id = %s AND er.status = 'approved'
@@ -57,7 +101,7 @@ def _get_platforms_for_merchant(merchant_id):
 
 def _get_meals_for_merchant_platform(merchant_id, platform_id):
     query = '''
-        SELECT id, name, price, meal_type, created_at
+        SELECT id, name, price, meal_type, created_at, rating_score, rating_count
         FROM meal
         WHERE merchant_id = %s AND platform_id = %s
         ORDER BY created_at DESC
@@ -65,6 +109,8 @@ def _get_meals_for_merchant_platform(merchant_id, platform_id):
     meals = execute_fetchall(query, [merchant_id, platform_id])
     for meal in meals:
         meal['get_meal_type_display'] = MEAL_TYPE_DISPLAY.get(meal['meal_type'], meal['meal_type'])
+        meal['rating_score'] = _format_decimal(meal['rating_score'])
+        meal['rating_count'] = meal['rating_count']
     return meals
 
 
@@ -81,27 +127,49 @@ def _get_customer_order_rows(customer_id):
                o.price,
                o.status,
                o.created_at,
+               o.merchant_id,
+               o.platform_id,
+               o.meal_id,
+               o.rider_id,
                m.merchant_name,
                p.platform_name,
                meal.name AS meal_name,
                d.id AS discount_id,
                d.discount_rate,
-               r.rider_name
+               r.rider_name,
+               rating.id AS rating_id,
+               rating.merchant_rating,
+               rating.meal_rating,
+               rating.platform_rating,
+               rating.rider_rating
         FROM {ORDER_TABLE} o
         JOIN merchant m ON o.merchant_id = m.id
         JOIN {PLATFORM_TABLE} p ON o.platform_id = p.id
         JOIN meal ON o.meal_id = meal.id
         LEFT JOIN discount d ON o.discount_id = d.id
         LEFT JOIN rider r ON o.rider_id = r.id
+        LEFT JOIN {ORDER_RATING_TABLE} rating ON rating.order_id = o.id
         WHERE o.customer_id = %s
         ORDER BY o.created_at DESC
     '''
     return execute_fetchall(query, [customer_id])
 
 
+def _extract_order_rating(row):
+    if not row['rating_id']:
+        return None
+    return {
+        'merchant': _format_decimal(row['merchant_rating']),
+        'meal': _format_decimal(row['meal_rating']),
+        'platform': _format_decimal(row['platform_rating']),
+        'rider': _format_decimal(row['rider_rating']) if row['rider_rating'] is not None else None,
+    }
+
+
 def _build_order_context(order_rows):
     result = []
     for row in order_rows:
+        order_rating = _extract_order_rating(row)
         result.append({
             'id': row['id'],
             'price': row['price'],
@@ -113,6 +181,8 @@ def _build_order_context(order_rows):
             'meal': {'name': row['meal_name']},
             'discount': {'discount_rate': row['discount_rate']} if row['discount_id'] else None,
             'rider': {'rider_name': row['rider_name']} if row['rider_name'] else None,
+            'rating': order_rating,
+            'can_rate': row['status'] == 'completed' and order_rating is None,
         })
     return result
 
@@ -120,6 +190,7 @@ def _build_order_context(order_rows):
 def _build_order_payload(order_rows):
     result = []
     for row in order_rows:
+        order_rating = _extract_order_rating(row)
         result.append({
             'id': row['id'],
             'merchant_name': row['merchant_name'],
@@ -130,6 +201,14 @@ def _build_order_payload(order_rows):
             'discount_rate': str(row['discount_rate'] * 100) if row['discount_id'] else '0',
             'rider_name': row['rider_name'],
             'status': row['status'],
+             'status_display': ORDER_STATUS_DISPLAY.get(row['status'], row['status']),
+            'can_rate': row['status'] == 'completed' and order_rating is None,
+            'has_rating': order_rating is not None,
+            'rating': order_rating,
+            'merchant_id': row['merchant_id'],
+            'platform_id': row['platform_id'],
+            'meal_id': row['meal_id'],
+            'rider_id': row['rider_id'],
             'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M') if row['created_at'] else '',
         })
     return result
@@ -142,8 +221,12 @@ def _get_enter_request(merchant_id, platform_id):
                m.merchant_name,
                m.phone AS merchant_phone,
                m.address AS merchant_address,
+               m.rating_score AS merchant_rating_score,
+               m.rating_count AS merchant_rating_count,
                p.id AS platform_id,
-               p.platform_name
+               p.platform_name,
+               p.rating_score AS platform_rating_score,
+               p.rating_count AS platform_rating_count
         FROM enter_request er
         JOIN merchant m ON er.merchant_id = m.id
         JOIN {PLATFORM_TABLE} p ON er.platform_id = p.id
@@ -207,10 +290,13 @@ def customer(request):
         customer_name = current_customer['customer_name']
 
         platforms = _get_platforms()
+        for platform in platforms:
+            platform['rating_score'] = _format_decimal(platform['rating_score'])
         merchants = _get_all_merchants()
 
         merchants_with_platforms = []
         for merchant in merchants:
+            merchant['rating_score'] = _format_decimal(merchant['rating_score'])
             approved_platforms = _get_platforms_for_merchant(merchant['id'])
             if not approved_platforms:
                 continue
@@ -221,6 +307,8 @@ def customer(request):
                 platform_info = {
                     'id': platform['platform_id'],
                     'platform_name': platform['platform_name'],
+                    'rating_score': _format_decimal(platform['rating_score']),
+                    'rating_count': platform['rating_count'],
                 }
                 meals = _get_meals_for_merchant_platform(merchant['id'], platform['platform_id'])
                 platforms_with_meals.append({
@@ -284,10 +372,14 @@ def get_merchant_detail(request, merchant_id, platform_id):
                 'merchant_name': enter_request['merchant_name'],
                 'phone': enter_request['merchant_phone'],
                 'address': enter_request['merchant_address'],
+                'rating_score': _format_decimal(enter_request['merchant_rating_score']),
+                'rating_count': enter_request['merchant_rating_count'],
             },
             'platform': {
                 'id': enter_request['platform_id'],
                 'platform_name': enter_request['platform_name'],
+                'rating_score': _format_decimal(enter_request['platform_rating_score']),
+                'rating_count': enter_request['platform_rating_count'],
             },
             'meals': [{
                 'id': meal['id'],
@@ -295,6 +387,8 @@ def get_merchant_detail(request, merchant_id, platform_id):
                 'price': str(meal['price']),
                 'meal_type': meal['meal_type'],
                 'created_at': meal['created_at'].strftime('%Y-%m-%d %H:%M') if meal['created_at'] else '',
+                'rating_score': meal['rating_score'],
+                'rating_count': meal['rating_count'],
             } for meal in meals],
             'available_discounts': available_discounts,
         })
@@ -403,7 +497,12 @@ def search_merchants(request):
         meal_type = request.GET.get('meal_type')
 
         base_query = '''
-            SELECT DISTINCT m.id, m.merchant_name, m.phone, m.address
+            SELECT DISTINCT m.id,
+                            m.merchant_name,
+                            m.phone,
+                            m.address,
+                            m.rating_score,
+                            m.rating_count
             FROM merchant m
             JOIN enter_request er ON er.merchant_id = m.id
             WHERE er.status = 'approved'
@@ -434,7 +533,7 @@ def search_merchants(request):
                     continue
 
                 meal_query = '''
-                    SELECT id, name, price, meal_type
+                    SELECT id, name, price, meal_type, rating_score, rating_count
                     FROM meal
                     WHERE merchant_id = %s AND platform_id = %s
                 '''
@@ -453,11 +552,15 @@ def search_merchants(request):
                 meals = execute_fetchall(meal_query + ' ORDER BY name', meal_params)
                 for meal in meals:
                     meal['get_meal_type_display'] = MEAL_TYPE_DISPLAY.get(meal['meal_type'], meal['meal_type'])
+                    meal['rating_score'] = _format_decimal(meal['rating_score'])
+                    meal['rating_count'] = meal['rating_count']
 
                 if meals or (not meal_name and not meal_type):
                     platform_info = {
                         'id': platform['platform_id'],
                         'platform_name': platform['platform_name'],
+                        'rating_score': _format_decimal(platform['rating_score']),
+                        'rating_count': platform['rating_count'],
                     }
                     platforms_with_meals.append({
                         'platform': platform_info,
@@ -530,17 +633,91 @@ def pickup_order(request, order_id):
         if order['status'] != 'ready':
             return JsonResponse({'success': False, 'message': '只能取餐状态为"待取餐"的订单'})
 
-        execute_non_query(f'DELETE FROM {ORDER_TABLE} WHERE id = %s', [order_id])
+        update_query = f'''
+            UPDATE {ORDER_TABLE}
+            SET status = 'completed'
+            WHERE id = %s
+        '''
+        execute_non_query(update_query, [order_id])
         order_info = {
             'id': order['id'],
             'customer': current_customer['customer_name'],
             'merchant': order['merchant_name'],
             'meal': order['meal_name'],
             'price': str(order['price']),
-            'status': order['status'],
+            'status': 'completed',
         }
-        return JsonResponse({'success': True, 'message': '取餐成功，订单已删除', 'order_info': order_info})
+        return JsonResponse({
+            'success': True,
+            'message': '取餐成功，订单已完成，请为本次体验评分',
+            'order_info': order_info,
+        })
     except ValueError:
         return JsonResponse({'success': False, 'message': '顾客信息不存在'})
     except Exception as exc:
         return JsonResponse({'success': False, 'message': f'取餐失败: {str(exc)}'})
+
+
+@login_required
+@csrf_exempt
+def rate_order(request, order_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
+
+    try:
+        current_customer = _get_customer(request.user)
+        data = json.loads(request.body)
+        merchant_rating = _normalize_rating(data.get('merchant_rating'))
+        meal_rating = _normalize_rating(data.get('meal_rating'))
+        platform_rating = _normalize_rating(data.get('platform_rating'))
+        rider_rating_value = data.get('rider_rating')
+        rider_rating = _normalize_rating(rider_rating_value) if rider_rating_value not in [None, ''] else None
+
+        order = execute_fetchone(
+            f'''
+            SELECT o.id, o.merchant_id, o.platform_id, o.meal_id, o.rider_id, o.status
+            FROM {ORDER_TABLE} o
+            WHERE o.id = %s AND o.customer_id = %s
+            ''',
+            [order_id, current_customer['id']],
+        )
+        if not order:
+            return JsonResponse({'success': False, 'message': '订单不存在或不属于当前顾客'})
+        if order['status'] != 'completed':
+            return JsonResponse({'success': False, 'message': '仅已完成的订单可以评价'})
+
+        existing_rating = execute_fetchone(f'SELECT id FROM {ORDER_RATING_TABLE} WHERE order_id = %s', [order_id])
+        if existing_rating:
+            return JsonResponse({'success': False, 'message': '订单已评价'})
+
+        if order['rider_id'] and rider_rating is None:
+            return JsonResponse({'success': False, 'message': '请为骑手评分'})
+        if not order['rider_id']:
+            rider_rating = None
+
+        execute_write(
+            f'''
+            INSERT INTO {ORDER_RATING_TABLE} (order_id, merchant_rating, meal_rating, platform_rating, rider_rating, created_at)
+            VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            ''',
+            [order_id, merchant_rating, meal_rating, platform_rating, rider_rating],
+        )
+
+        _update_entity_rating(MERCHANT_TABLE, order['merchant_id'], merchant_rating)
+        _update_entity_rating(MEAL_TABLE, order['meal_id'], meal_rating)
+        _update_entity_rating(PLATFORM_TABLE, order['platform_id'], platform_rating)
+        if order['rider_id'] and rider_rating is not None:
+            _update_entity_rating(RIDER_TABLE, order['rider_id'], rider_rating)
+
+        rating_payload = {
+            'merchant': _format_decimal(merchant_rating),
+            'meal': _format_decimal(meal_rating),
+            'platform': _format_decimal(platform_rating),
+            'rider': _format_decimal(rider_rating) if rider_rating is not None else None,
+        }
+
+        return JsonResponse({'success': True, 'message': '感谢您的评价！', 'rating': rating_payload})
+    except (ValueError, InvalidOperation) as exc:
+        return JsonResponse({'success': False, 'message': str(exc)})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'评价失败: {str(exc)}'})

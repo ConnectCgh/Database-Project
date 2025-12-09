@@ -53,6 +53,8 @@ class Merchant(models.Model):
     phone = models.CharField(max_length=15)  # 电话
     address = models.TextField()  # 地址
     created_at = models.DateTimeField(auto_now_add=True)
+    rating_score = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    rating_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = 'merchant'
@@ -66,6 +68,8 @@ class Platform(models.Model):
     platform_name = models.CharField(max_length=100)  # 平台名
     phone = models.CharField(max_length=15)  # 电话
     created_at = models.DateTimeField(auto_now_add=True)
+    rating_score = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    rating_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = 'platform'
@@ -87,6 +91,8 @@ class Rider(models.Model):
     phone = models.CharField(max_length=15)  # 电话
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offline')  # 状态
     created_at = models.DateTimeField(auto_now_add=True)
+    rating_score = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    rating_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = 'rider'
