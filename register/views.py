@@ -1,12 +1,12 @@
 # register/views.py
 from django.shortcuts import render, redirect
-from django.contrib.auth.models import User
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
-from login.models import UserProfile, Customer, Rider, Platform, Merchant
 from django.db import connection
 import logging
 from django.contrib.auth.hashers import make_password
+
+from Project.db_utils import execute_fetchone, execute_non_query, execute_write
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,78 @@ def create_user_with_sql(username, password):
         return user_id
 
 
+def ensure_user_profile(user_id, user_type, phone):
+    profile = execute_fetchone('SELECT id FROM user_profile WHERE user_id = %s', [user_id])
+    if profile:
+        execute_non_query(
+            '''
+            UPDATE user_profile
+            SET user_type = %s,
+                phone = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            ''',
+            [user_type, phone, profile['id']],
+        )
+        return profile['id']
+
+    return execute_write(
+        '''
+        INSERT INTO user_profile (user_id, user_type, phone, created_at, updated_at)
+        VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ''',
+        [user_id, user_type, phone],
+    )
+
+
+def ensure_detail_record(profile_id, user_type, username, phone):
+    if user_type == 'customer':
+        existing = execute_fetchone('SELECT id FROM customer WHERE user_profile_id = %s', [profile_id])
+        if not existing:
+            execute_write(
+                '''
+                INSERT INTO customer (user_profile_id, customer_name, phone, address, created_at)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                ''',
+                [profile_id, username, phone, '待填写'],
+            )
+    elif user_type == 'rider':
+        existing = execute_fetchone('SELECT id FROM rider WHERE user_profile_id = %s', [profile_id])
+        if not existing:
+            execute_write(
+                '''
+                INSERT INTO rider (user_profile_id, rider_name, phone, status, created_at)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                ''',
+                [profile_id, username, phone, 'offline'],
+            )
+    elif user_type == 'merchant':
+        existing = execute_fetchone('SELECT id FROM merchant WHERE user_profile_id = %s', [profile_id])
+        if not existing:
+            execute_write(
+                '''
+                INSERT INTO merchant (user_profile_id, merchant_name, phone, address, created_at)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                ''',
+                [profile_id, username, phone, '待填写'],
+            )
+    elif user_type == 'platform':
+        existing = execute_fetchone('SELECT id FROM platform WHERE user_profile_id = %s', [profile_id])
+        if not existing:
+            execute_write(
+                '''
+                INSERT INTO platform (user_profile_id, platform_name, phone, created_at)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                ''',
+                [profile_id, username, phone],
+            )
+
+
+def cleanup_user_records(user_id):
+    execute_non_query('DELETE FROM user_profile WHERE user_id = %s', [user_id])
+    execute_non_query('DELETE FROM auth_user WHERE id = %s', [user_id])
+
+
 def register(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -61,77 +133,15 @@ def register(request):
             return render(request, 'register.html')
 
         try:
-            # 使用SQL创建用户
             user_id = create_user_with_sql(username, password)
             logger.info(f"用户创建成功: {user_id}")
 
-            # 获取用户对象用于登录
-            user = User.objects.get(id=user_id)
+            profile_id = ensure_user_profile(user_id, user_type, phone)
+            logger.info(f"用户资料处理成功: {profile_id}, 类型: {user_type}")
 
-            # 等待信号创建 UserProfile，然后更新它
-            import time
-            time.sleep(0.1)
+            ensure_detail_record(user_type=user_type, profile_id=profile_id, username=username, phone=phone)
+            logger.info("类型记录创建完成")
 
-            # 获取 UserProfile（信号应该已经创建了）
-            try:
-                user_profile = user.userprofile
-            except UserProfile.DoesNotExist:
-                # 如果信号没有工作，手动创建
-                user_profile = UserProfile.objects.create(
-                    user=user,
-                    user_type=user_type,
-                    phone=phone
-                )
-                logger.info("手动创建 UserProfile")
-            else:
-                # 更新现有的 UserProfile
-                user_profile.user_type = user_type
-                user_profile.phone = phone
-                user_profile.save()
-                logger.info("更新现有 UserProfile")
-
-            logger.info(f"用户资料处理成功: {user_profile.id}, 类型: {user_profile.user_type}")
-
-            # 等待信号创建对应的类型记录
-            time.sleep(0.1)
-
-            # 检查对应的类型记录是否存在，如果不存在则创建
-            if user_type == 'customer':
-                if not hasattr(user_profile, 'customer'):
-                    Customer.objects.create(
-                        user_profile=user_profile,
-                        customer_name=username,
-                        phone=phone,
-                        address="待填写"
-                    )
-                    logger.info("创建顾客记录")
-            elif user_type == 'rider':
-                if not hasattr(user_profile, 'rider'):
-                    Rider.objects.create(
-                        user_profile=user_profile,
-                        rider_name=username,
-                        phone=phone
-                    )
-                    logger.info("创建骑手记录")
-            elif user_type == 'merchant':
-                if not hasattr(user_profile, 'merchant'):
-                    Merchant.objects.create(
-                        user_profile=user_profile,
-                        merchant_name=username,
-                        phone=phone,
-                        address="待填写"
-                    )
-                    logger.info("创建商家记录")
-            elif user_type == 'platform':
-                if not hasattr(user_profile, 'platform'):
-                    Platform.objects.create(
-                        user_profile=user_profile,
-                        platform_name=username,
-                        phone=phone
-                    )
-                    logger.info("创建平台记录")
-
-            # 自动登录 - 需要验证用户
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
@@ -140,15 +150,12 @@ def register(request):
                 messages.error(request, '自动登录失败，请手动登录')
                 return redirect('login')
 
-            # 重定向到对应页面
             return redirect('login')
 
         except Exception as e:
             logger.error(f"注册错误: {str(e)}")
-            # 如果创建过程中出现错误，删除已创建的用户
             if 'user_id' in locals():
-                with connection.cursor() as cursor:
-                    cursor.execute("DELETE FROM auth_user WHERE id = %s", [user_id])
+                cleanup_user_records(user_id)
             messages.error(request, f'注册失败: {str(e)}')
             return render(request, 'register.html')
 
