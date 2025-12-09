@@ -24,9 +24,11 @@ from customer import views as customer_views
 from rider import views as rider_views
 from merchant import views as merchant_views
 from platforme import views as platform_views
+from home import views as home_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", home_views.HomeView.as_view()),
     path("login/", login_views.login, name="login"),
     path("register/", register_views.register, name="register"),
     path("customer/", customer_views.customer, name="customer"),
