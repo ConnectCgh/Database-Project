@@ -1,10 +1,13 @@
 # register/views.py
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
-from django.contrib import messages
-from django.db import connection
 import logging
+
+from django.contrib import messages
+from django.contrib.auth import login, authenticate
 from django.contrib.auth.hashers import make_password
+from django.db import connection
+from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.views.decorators.http import require_GET
 
 from Project.db_utils import execute_fetchone, execute_non_query, execute_write
 
@@ -15,9 +18,11 @@ def check_username_exists(username):
     """
     使用原始SQL查询检查用户名是否存在
     """
+    if not username:
+        return False
     with connection.cursor() as cursor:
-        cursor.execute("SELECT EXISTS(SELECT 1 FROM auth_user WHERE username = %s)", [username])
-        return cursor.fetchone()[0]
+        cursor.execute("SELECT 1 FROM auth_user WHERE LOWER(username) = LOWER(%s) LIMIT 1", [username])
+        return cursor.fetchone() is not None
 
 
 def create_user_with_sql(username, password):
@@ -115,10 +120,10 @@ def cleanup_user_records(user_id):
 
 def register(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
+        username = (request.POST.get('username') or '').strip()
         password = request.POST.get('password')
         user_type = request.POST.get('user_type', 'customer')
-        phone = request.POST.get('phone', '')
+        phone = (request.POST.get('phone', '') or '').strip()
 
         logger.info(f"接收到注册请求: username={username}, user_type={user_type}")
 
@@ -160,3 +165,12 @@ def register(request):
             return render(request, 'register.html')
 
     return render(request, 'register.html')
+
+
+@require_GET
+def check_username(request):
+    username = (request.GET.get('username') or '').strip()
+    if not username:
+        return JsonResponse({'available': False, 'message': '用户名不能为空'}, status=400)
+    exists = check_username_exists(username)
+    return JsonResponse({'available': not exists})
