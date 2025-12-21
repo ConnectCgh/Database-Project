@@ -1,11 +1,14 @@
 # models.py
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
 from discount.models import Discount
+from Project.db_utils import execute_fetchone, execute_non_query, execute_write
+
+PLACEHOLDER_ADDRESS = '待填写'
 
 
 class UserProfile(models.Model):
@@ -156,77 +159,140 @@ class MerchantPlatformDiscount(models.Model):
     def __str__(self):
         return f"{self.merchant.merchant_name} 在 {self.platform.platform_name} 的折扣: {self.discount.discount_rate}%"
 
+
+def _clean_text(value, default=''):
+    return value if value is not None else default
+
+
+def _ensure_customer_record(profile_id, name, phone):
+    if not profile_id:
+        return
+    existing = execute_fetchone('SELECT id FROM customer WHERE user_profile_id = %s', [profile_id])
+    if existing:
+        return
+    now = timezone.now()
+    execute_write(
+        '''
+        INSERT INTO customer (user_profile_id, customer_name, phone, address, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        ''',
+        [profile_id, _clean_text(name), _clean_text(phone), PLACEHOLDER_ADDRESS, now],
+    )
+
+
+def _ensure_rider_record(profile_id, name, phone):
+    if not profile_id:
+        return
+    existing = execute_fetchone('SELECT id FROM rider WHERE user_profile_id = %s', [profile_id])
+    if existing:
+        return
+    now = timezone.now()
+    execute_write(
+        '''
+        INSERT INTO rider (user_profile_id, rider_name, phone, status, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        ''',
+        [profile_id, _clean_text(name), _clean_text(phone), 'offline', now],
+    )
+
+
+def _ensure_merchant_record(profile_id, name, phone):
+    if not profile_id:
+        return
+    existing = execute_fetchone('SELECT id FROM merchant WHERE user_profile_id = %s', [profile_id])
+    if existing:
+        return
+    now = timezone.now()
+    execute_write(
+        '''
+        INSERT INTO merchant (user_profile_id, merchant_name, phone, address, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+        ''',
+        [profile_id, _clean_text(name), _clean_text(phone), PLACEHOLDER_ADDRESS, now],
+    )
+
+
+def _ensure_platform_record(profile_id, name, phone):
+    if not profile_id:
+        return
+    existing = execute_fetchone('SELECT id FROM platform WHERE user_profile_id = %s', [profile_id])
+    if existing:
+        return
+    now = timezone.now()
+    execute_write(
+        '''
+        INSERT INTO platform (user_profile_id, platform_name, phone, created_at)
+        VALUES (%s, %s, %s, %s)
+        ''',
+        [profile_id, _clean_text(name), _clean_text(phone), now],
+    )
+
+
+def _ensure_role_records(profile_id, user_type, username, phone):
+    if user_type == 'customer':
+        _ensure_customer_record(profile_id, username, phone)
+    elif user_type == 'rider':
+        _ensure_rider_record(profile_id, username, phone)
+    elif user_type == 'merchant':
+        _ensure_merchant_record(profile_id, username, phone)
+    elif user_type == 'platform':
+        _ensure_platform_record(profile_id, username, phone)
+
+
+def _get_username_by_id(user_id):
+    if not user_id:
+        return ''
+    record = execute_fetchone('SELECT username FROM auth_user WHERE id = %s', [user_id])
+    return record['username'] if record else ''
+
+
+def _ensure_user_profile_record(user):
+    if not user or not user.id:
+        return None
+    profile = execute_fetchone(
+        'SELECT id, user_type, phone FROM user_profile WHERE user_id = %s',
+        [user.id],
+    )
+    if profile:
+        execute_non_query(
+            'UPDATE user_profile SET updated_at = %s WHERE id = %s',
+            [timezone.now(), profile['id']],
+        )
+        return profile
+
+    now = timezone.now()
+    profile_id = execute_write(
+        '''
+        INSERT INTO user_profile (user_id, user_type, phone, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s)
+        ''',
+        [user.id, 'customer', '', now, now],
+    )
+    _ensure_role_records(profile_id, 'customer', user.username, '')
+    return {'id': profile_id, 'user_type': 'customer', 'phone': ''}
+
+
 # 信号处理：根据用户类型创建对应的详细表
 @receiver(post_save, sender=UserProfile)
 def create_user_type_profile(sender, instance, created, **kwargs):
-    if created:
-        # 使用用户名作为默认的名称
-        default_name = instance.user.username
-
-        if instance.user_type == 'customer':
-            Customer.objects.create(
-                user_profile=instance,
-                customer_name=default_name,
-                phone=instance.phone or ''
-            )
-        elif instance.user_type == 'rider':
-            Rider.objects.create(
-                user_profile=instance,
-                rider_name=default_name,
-                phone=instance.phone or ''
-            )
-        elif instance.user_type == 'merchant':
-            Merchant.objects.create(
-                user_profile=instance,
-                merchant_name=default_name,
-                phone=instance.phone or ''
-            )
-        elif instance.user_type == 'platform':
-            Platform.objects.create(
-                user_profile=instance,
-                platform_name=default_name,
-                phone=instance.phone or ''
-            )
+    if not created:
+        return
+    username = _get_username_by_id(instance.user_id)
+    _ensure_role_records(instance.id, instance.user_type, username, instance.phone or '')
 
 
 @receiver(post_save, sender=UserProfile)
 def save_user_type_profile(sender, instance, **kwargs):
-    # 确保关联表也存在
-    if instance.user_type == 'customer' and not hasattr(instance, 'customer'):
-        Customer.objects.create(
-            user_profile=instance,
-            customer_name=instance.user.username,
-            phone=instance.phone or ''
-        )
-    elif instance.user_type == 'rider' and not hasattr(instance, 'rider'):
-        Rider.objects.create(
-            user_profile=instance,
-            rider_name=instance.user.username,
-            phone=instance.phone or ''
-        )
-    elif instance.user_type == 'merchant' and not hasattr(instance, 'merchant'):
-        Merchant.objects.create(
-            user_profile=instance,
-            merchant_name=instance.user.username,
-            phone=instance.phone or ''
-        )
-    elif instance.user_type == 'platform' and not hasattr(instance, 'platform'):
-        Platform.objects.create(
-            user_profile=instance,
-            platform_name=instance.user.username,
-            phone=instance.phone or ''
-        )
+    username = _get_username_by_id(instance.user_id)
+    _ensure_role_records(instance.id, instance.user_type, username, instance.phone or '')
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """创建用户时自动创建 UserProfile"""
     if created:
-        UserProfile.objects.create(user=instance)
+        _ensure_user_profile_record(instance)
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     """保存用户时确保 UserProfile 存在"""
-    try:
-        instance.userprofile.save()
-    except UserProfile.DoesNotExist:
-        UserProfile.objects.create(user=instance)
+    _ensure_user_profile_record(instance)
