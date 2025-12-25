@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 
 from Project.db_utils import (
     execute_fetchall,
@@ -34,6 +35,8 @@ ORDER_STATUS_DISPLAY = {
 PLATFORM_TABLE = quote_table('platform')
 ORDER_TABLE = quote_table('order')
 ORDER_RATING_TABLE = quote_table('order_rating')
+ORDER_ITEM_TABLE = quote_table('order_item')
+ORDER_MEAL_RATING_TABLE = quote_table('order_meal_rating')
 MERCHANT_TABLE = quote_table('merchant')
 MEAL_TABLE = quote_table('meal')
 RIDER_TABLE = quote_table('rider')
@@ -122,37 +125,85 @@ def _get_customer(order_user):
 
 
 def _get_customer_order_rows(customer_id):
-    query = f'''
+    base_query = f'''
         SELECT o.id,
                o.price,
                o.status,
                o.created_at,
                o.merchant_id,
                o.platform_id,
-               o.meal_id,
                o.rider_id,
                m.merchant_name,
                p.platform_name,
-               meal.name AS meal_name,
                d.id AS discount_id,
                d.discount_rate,
                r.rider_name,
                rating.id AS rating_id,
                rating.merchant_rating,
-               rating.meal_rating,
                rating.platform_rating,
                rating.rider_rating
         FROM {ORDER_TABLE} o
         JOIN merchant m ON o.merchant_id = m.id
         JOIN {PLATFORM_TABLE} p ON o.platform_id = p.id
-        JOIN meal ON o.meal_id = meal.id
         LEFT JOIN discount d ON o.discount_id = d.id
         LEFT JOIN rider r ON o.rider_id = r.id
         LEFT JOIN {ORDER_RATING_TABLE} rating ON rating.order_id = o.id
         WHERE o.customer_id = %s
         ORDER BY o.created_at DESC
     '''
-    return execute_fetchall(query, [customer_id])
+    orders = execute_fetchall(base_query, [customer_id])
+    if not orders:
+        return []
+
+    order_map = {order['id']: order for order in orders}
+    for order in order_map.values():
+        order['meals'] = []
+
+    order_ids = list(order_map.keys())
+    placeholders = _build_in_clause(order_ids)
+
+    items_query = f'''
+        SELECT oi.id,
+               oi.order_id,
+               oi.meal_id,
+               meal.name AS meal_name,
+               oi.quantity,
+               oi.unit_price,
+               oi.line_price
+        FROM {ORDER_ITEM_TABLE} oi
+        JOIN meal ON oi.meal_id = meal.id
+        WHERE oi.order_id IN ({placeholders})
+        ORDER BY oi.id
+    '''
+    items = execute_fetchall(items_query, order_ids)
+    item_lookup = {}
+    for item in items:
+        entry = {
+            'item_id': item['id'],
+            'meal_id': item['meal_id'],
+            'meal_name': item['meal_name'],
+            'quantity': item['quantity'],
+            'unit_price': item['unit_price'],
+            'line_price': item['line_price'],
+            'rating': None,
+        }
+        order_map[item['order_id']]['meals'].append(entry)
+        item_lookup[item['id']] = entry
+
+    ratings_query = f'''
+        SELECT omr.order_id,
+               omr.order_item_id,
+               omr.rating
+        FROM {ORDER_MEAL_RATING_TABLE} omr
+        WHERE omr.order_id IN ({placeholders})
+    '''
+    meal_ratings = execute_fetchall(ratings_query, order_ids)
+    for rating in meal_ratings:
+        item_entry = item_lookup.get(rating['order_item_id'])
+        if item_entry is not None:
+            item_entry['rating'] = _format_decimal(rating['rating'])
+
+    return orders
 
 
 def _extract_order_rating(row):
@@ -160,16 +211,31 @@ def _extract_order_rating(row):
         return None
     return {
         'merchant': _format_decimal(row['merchant_rating']),
-        'meal': _format_decimal(row['meal_rating']),
         'platform': _format_decimal(row['platform_rating']),
         'rider': _format_decimal(row['rider_rating']) if row['rider_rating'] is not None else None,
     }
+
+
+def _format_meal_summary(meals):
+    if not meals:
+        return ''
+    return ', '.join(f"{meal['name']} x{meal['quantity']}" for meal in meals)
 
 
 def _build_order_context(order_rows):
     result = []
     for row in order_rows:
         order_rating = _extract_order_rating(row)
+        meals = []
+        for meal in row.get('meals', []):
+            meals.append({
+                'id': meal['item_id'],
+                'name': meal['meal_name'],
+                'quantity': meal['quantity'],
+                'unit_price': meal['unit_price'],
+                'line_price': meal['line_price'],
+                'rating': meal['rating'],
+            })
         result.append({
             'id': row['id'],
             'price': row['price'],
@@ -178,7 +244,8 @@ def _build_order_context(order_rows):
             'created_at': row['created_at'],
             'merchant': {'merchant_name': row['merchant_name']},
             'platform': {'platform_name': row['platform_name']},
-            'meal': {'name': row['meal_name']},
+            'meals': meals,
+            'meal_summary': _format_meal_summary(meals),
             'discount': {'discount_rate': row['discount_rate']} if row['discount_id'] else None,
             'rider': {'rider_name': row['rider_name']} if row['rider_name'] else None,
             'rating': order_rating,
@@ -191,11 +258,21 @@ def _build_order_payload(order_rows):
     result = []
     for row in order_rows:
         order_rating = _extract_order_rating(row)
+        meals_payload = []
+        for meal in row.get('meals', []):
+            meals_payload.append({
+                'id': meal['item_id'],
+                'meal_id': meal['meal_id'],
+                'name': meal['meal_name'],
+                'quantity': meal['quantity'],
+                'unit_price': str(meal['unit_price']),
+                'line_price': str(meal['line_price']),
+                'rating': meal['rating'],
+            })
         result.append({
             'id': row['id'],
             'merchant_name': row['merchant_name'],
             'platform_name': row['platform_name'],
-            'meal_name': row['meal_name'],
             'price': str(row['price']),
             'discount_id': row['discount_id'],
             'discount_rate': str(row['discount_rate'] * 100) if row['discount_id'] else '0',
@@ -207,9 +284,10 @@ def _build_order_payload(order_rows):
             'rating': order_rating,
             'merchant_id': row['merchant_id'],
             'platform_id': row['platform_id'],
-            'meal_id': row['meal_id'],
             'rider_id': row['rider_id'],
             'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M') if row['created_at'] else '',
+            'meals': meals_payload,
+            'meal_summary': _format_meal_summary(meals_payload),
         })
     return result
 
@@ -269,6 +347,10 @@ def _get_available_meal_ids(merchant_id, platform_id):
     query = 'SELECT id FROM meal WHERE merchant_id = %s AND platform_id = %s'
     rows = execute_fetchall(query, [merchant_id, platform_id])
     return [row['id'] for row in rows]
+
+
+def _build_in_clause(values):
+    return ','.join(['%s'] * len(values))
 
 
 def _meal_type_filters(meal_type):
@@ -427,10 +509,13 @@ def place_order(request):
             if not discount:
                 discount = None
 
-        created_orders = []
+        order_items = []
+        total_price_decimal = Decimal('0')
         for meal_data in meals_data:
             meal_id = meal_data.get('meal_id')
             quantity = int(meal_data.get('quantity', 1))
+            if quantity < 1:
+                quantity = 1
             meal = _fetch_meal(merchant_id, platform_id, meal_id)
             if not meal:
                 available_ids = _get_available_meal_ids(merchant_id, platform_id)
@@ -439,36 +524,65 @@ def place_order(request):
                     'message': f'餐品不存在或不属于该商家和平台。餐品ID: {meal_id}, 可用餐品: {available_ids}',
                 })
 
-            meal_price = Decimal(meal['price']) * Decimal(quantity)
+            unit_price = Decimal(meal['price'])
+            line_price = unit_price * Decimal(quantity)
             if discount:
-                meal_price = meal_price * (Decimal('1') - Decimal(discount['discount_rate']))
-            meal_price = meal_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                line_price = line_price * (Decimal('1') - Decimal(discount['discount_rate']))
+            line_price = line_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-            query = f'''
-                INSERT INTO {ORDER_TABLE} (customer_id, platform_id, merchant_id, meal_id, discount_id, rider_id, price, status, created_at)
-                VALUES (%s, %s, %s, %s, %s, NULL, %s, 'unassigned', CURRENT_TIMESTAMP)
+            order_items.append({
+                'meal_id': meal['id'],
+                'meal_name': meal['name'],
+                'quantity': quantity,
+                'unit_price': unit_price,
+                'line_price': line_price,
+            })
+            total_price_decimal += line_price
+
+        total_price_decimal = total_price_decimal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        with transaction.atomic():
+            order_query = f'''
+                INSERT INTO {ORDER_TABLE} (customer_id, platform_id, merchant_id, discount_id, rider_id, price, status, created_at)
+                VALUES (%s, %s, %s, %s, NULL, %s, 'unassigned', CURRENT_TIMESTAMP)
             '''
-            order_id = execute_write(query, [
+            order_id = execute_write(order_query, [
                 current_customer['id'],
                 platform_id,
                 merchant_id,
-                meal['id'],
                 discount['id'] if discount else None,
-                meal_price,
+                total_price_decimal,
             ])
 
-            created_orders.append({
-                'id': order_id,
-                'meal_name': meal['name'],
-                'price': str(meal_price),
-                'status': 'unassigned',
-            })
+            item_query = f'''
+                INSERT INTO {ORDER_ITEM_TABLE} (order_id, meal_id, quantity, unit_price, line_price, created_at)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            '''
+            for item in order_items:
+                execute_write(item_query, [
+                    order_id,
+                    item['meal_id'],
+                    item['quantity'],
+                    item['unit_price'],
+                    item['line_price'],
+                ])
+
+        order_summary = {
+            'id': order_id,
+            'meals': [{
+                'name': item['meal_name'],
+                'quantity': item['quantity'],
+                'line_price': str(item['line_price']),
+            } for item in order_items],
+            'price': str(total_price_decimal),
+            'status': 'unassigned',
+        }
 
         return JsonResponse({
             'success': True,
             'message': '下单成功',
-            'orders': created_orders,
-            'total_price': str(total_price),
+            'orders': [order_summary],
+            'total_price': str(total_price_decimal),
         })
     except ValueError:
         return JsonResponse({'success': False, 'message': '顾客信息不存在'})
@@ -619,11 +733,9 @@ def pickup_order(request, order_id):
             SELECT o.id,
                    o.status,
                    o.price,
-                   m.merchant_name,
-                   meal.name AS meal_name
+                   m.merchant_name
             FROM {ORDER_TABLE} o
             JOIN merchant m ON o.merchant_id = m.id
-            JOIN meal ON o.meal_id = meal.id
             WHERE o.id = %s AND o.customer_id = %s
         '''
         order = execute_fetchone(order_query, [order_id, current_customer['id']])
@@ -639,11 +751,22 @@ def pickup_order(request, order_id):
             WHERE id = %s
         '''
         execute_non_query(update_query, [order_id])
+        meal_rows = execute_fetchall(
+            f'''
+            SELECT meal.name, oi.quantity
+            FROM {ORDER_ITEM_TABLE} oi
+            JOIN meal ON oi.meal_id = meal.id
+            WHERE oi.order_id = %s
+            ORDER BY oi.id
+            ''',
+            [order_id],
+        )
+        meal_summary = ', '.join(f"{row['name']}x{row['quantity']}" for row in meal_rows) if meal_rows else ''
         order_info = {
             'id': order['id'],
             'customer': current_customer['customer_name'],
             'merchant': order['merchant_name'],
-            'meal': order['meal_name'],
+            'meals': meal_summary,
             'price': str(order['price']),
             'status': 'completed',
         }
@@ -668,14 +791,14 @@ def rate_order(request, order_id):
         current_customer = _get_customer(request.user)
         data = json.loads(request.body)
         merchant_rating = _normalize_rating(data.get('merchant_rating'))
-        meal_rating = _normalize_rating(data.get('meal_rating'))
         platform_rating = _normalize_rating(data.get('platform_rating'))
         rider_rating_value = data.get('rider_rating')
         rider_rating = _normalize_rating(rider_rating_value) if rider_rating_value not in [None, ''] else None
+        meal_ratings_payload = data.get('meal_ratings', [])
 
         order = execute_fetchone(
             f'''
-            SELECT o.id, o.merchant_id, o.platform_id, o.meal_id, o.rider_id, o.status
+            SELECT o.id, o.merchant_id, o.platform_id, o.rider_id, o.status
             FROM {ORDER_TABLE} o
             WHERE o.id = %s AND o.customer_id = %s
             ''',
@@ -695,25 +818,75 @@ def rate_order(request, order_id):
         if not order['rider_id']:
             rider_rating = None
 
-        execute_write(
+        order_items = execute_fetchall(
             f'''
-            INSERT INTO {ORDER_RATING_TABLE} (order_id, merchant_rating, meal_rating, platform_rating, rider_rating, created_at)
-            VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            SELECT oi.id, oi.meal_id, meal.name AS meal_name
+            FROM {ORDER_ITEM_TABLE} oi
+            JOIN meal ON oi.meal_id = meal.id
+            WHERE oi.order_id = %s
+            ORDER BY oi.id
             ''',
-            [order_id, merchant_rating, meal_rating, platform_rating, rider_rating],
+            [order_id],
         )
+        if not order_items:
+            return JsonResponse({'success': False, 'message': '订单中没有餐品，无法评价'})
+
+        if len(meal_ratings_payload) != len(order_items):
+            return JsonResponse({'success': False, 'message': '请为订单中的每个餐品评分'})
+
+        order_item_ids = {item['id'] for item in order_items}
+        normalized_meal_ratings = {}
+        for rating_entry in meal_ratings_payload:
+            item_id = rating_entry.get('order_item_id')
+            if item_id is None:
+                return JsonResponse({'success': False, 'message': '缺少餐品评分信息'})
+            try:
+                item_id = int(item_id)
+            except (TypeError, ValueError):
+                return JsonResponse({'success': False, 'message': '餐品评分数据无效'})
+            if item_id not in order_item_ids:
+                return JsonResponse({'success': False, 'message': '餐品评分与订单不匹配'})
+            if item_id in normalized_meal_ratings:
+                return JsonResponse({'success': False, 'message': '同一餐品不能重复评分'})
+            normalized_meal_ratings[item_id] = _normalize_rating(rating_entry.get('rating'))
+
+        missing_items = order_item_ids - set(normalized_meal_ratings.keys())
+        if missing_items:
+            return JsonResponse({'success': False, 'message': '请为订单中的每个餐品评分'})
+
+        with transaction.atomic():
+            execute_write(
+                f'''
+                INSERT INTO {ORDER_RATING_TABLE} (order_id, merchant_rating, platform_rating, rider_rating, created_at)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                ''',
+                [order_id, merchant_rating, platform_rating, rider_rating],
+            )
+
+            insert_meal_rating_query = f'''
+                INSERT INTO {ORDER_MEAL_RATING_TABLE} (order_id, order_item_id, meal_id, rating, created_at)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+            '''
+            for item in order_items:
+                rating_value = normalized_meal_ratings[item['id']]
+                execute_write(insert_meal_rating_query, [order_id, item['id'], item['meal_id'], rating_value])
 
         _update_entity_rating(MERCHANT_TABLE, order['merchant_id'], merchant_rating)
-        _update_entity_rating(MEAL_TABLE, order['meal_id'], meal_rating)
         _update_entity_rating(PLATFORM_TABLE, order['platform_id'], platform_rating)
         if order['rider_id'] and rider_rating is not None:
             _update_entity_rating(RIDER_TABLE, order['rider_id'], rider_rating)
+        for item in order_items:
+            _update_entity_rating(MEAL_TABLE, item['meal_id'], normalized_meal_ratings[item['id']])
 
         rating_payload = {
             'merchant': _format_decimal(merchant_rating),
-            'meal': _format_decimal(meal_rating),
             'platform': _format_decimal(platform_rating),
             'rider': _format_decimal(rider_rating) if rider_rating is not None else None,
+            'meals': [{
+                'order_item_id': item['id'],
+                'meal_name': item['meal_name'],
+                'rating': _format_decimal(normalized_meal_ratings[item['id']]),
+            } for item in order_items],
         }
 
         return JsonResponse({'success': True, 'message': '感谢您的评价！', 'rating': rating_payload})

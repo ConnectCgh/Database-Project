@@ -965,7 +965,7 @@
                                     <td>#{{ order.id }}</td>
                                     <td>{{ order.merchant.merchant_name }}</td>
                                     <td>{{ order.platform.platform_name }}</td>
-                                    <td>{{ order.meal.name }}</td>
+                                    <td>{{ order.meal_summary }}</td>
                                     <td>¥{{ order.price }}</td>
                                     <td>{% if order.discount %}{{ order.discount.discount_rate|floatformat:0 }}%{% else %}无{% endif %}</td>
                                     <td>{% if order.rider %}{{ order.rider.rider_name }}{% else %}未分配{% endif %}</td>
@@ -978,12 +978,20 @@
                                     <td>
                                         {% if order.rating %}
                                         <div class="rating-summary">
-                                            <span>商家: {{ order.rating.merchant }}</span>
-                                            <span>餐品: {{ order.rating.meal }}</span>
-                                            <span>平台: {{ order.rating.platform }}</span>
-                                            {% if order.rating.rider %}
-                                            <span>骑手: {{ order.rating.rider }}</span>
-                                            {% endif %}
+                                            <div>
+                                                <span>商家: {{ order.rating.merchant }}</span>
+                                                <span>平台: {{ order.rating.platform }}</span>
+                                                {% if order.rating.rider %}
+                                                <span>骑手: {{ order.rating.rider }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                                                {% for meal in order.meals %}
+                                                <span>{{ meal.name }}: {% if meal.rating %}{{ meal.rating }}{% else %}未评分{% endif %}</span>
+                                                {% empty %}
+                                                <span>暂无餐品评分</span>
+                                                {% endfor %}
+                                            </div>
                                         </div>
                                         {% elif order.can_rate %}
                                         <button class="btn btn-primary rate-order-btn" data-order-id="{{ order.id }}">
@@ -1009,7 +1017,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="10" style="text-align: center;">暂无订单记录</td>
+                                    <td colspan="11" style="text-align: center;">暂无订单记录</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -1080,7 +1088,7 @@
                 <div class="rating-order-info">
                     <div>商家：<span id="rating-merchant-name"></span></div>
                     <div>平台：<span id="rating-platform-name"></span></div>
-                    <div>餐品：<span id="rating-meal-name"></span></div>
+                    <div>餐品：<span id="rating-meal-summary"></span></div>
                     <div>骑手：<span id="rating-rider-name">未分配</span></div>
                 </div>
                 <form id="rate-order-form">
@@ -1088,9 +1096,9 @@
                         <label for="merchant-rating-input">商家评分 (0-5)</label>
                         <input type="number" min="0" max="5" step="0.5" id="merchant-rating-input" class="rating-input" required>
                     </div>
-                    <div class="rating-input-group">
-                        <label for="meal-rating-input">餐品评分 (0-5)</label>
-                        <input type="number" min="0" max="5" step="0.5" id="meal-rating-input" class="rating-input" required>
+                    <div class="rating-input-group" id="meal-rating-container">
+                        <label>餐品评分 (0-5)</label>
+                        <div id="meal-rating-fields" style="display: flex; flex-direction: column; gap: 8px;"></div>
                     </div>
                     <div class="rating-input-group">
                         <label for="platform-rating-input">平台评分 (0-5)</label>
@@ -1164,13 +1172,13 @@
     const rateOrderModal = document.getElementById('rate-order-modal');
     const rateOrderForm = document.getElementById('rate-order-form');
     const merchantRatingInput = document.getElementById('merchant-rating-input');
-    const mealRatingInput = document.getElementById('meal-rating-input');
+    const mealRatingFields = document.getElementById('meal-rating-fields');
     const platformRatingInput = document.getElementById('platform-rating-input');
     const riderRatingInput = document.getElementById('rider-rating-input');
     const riderRatingRow = document.getElementById('rider-rating-row');
     const ratingMerchantName = document.getElementById('rating-merchant-name');
     const ratingPlatformName = document.getElementById('rating-platform-name');
-    const ratingMealName = document.getElementById('rating-meal-name');
+    const ratingMealSummary = document.getElementById('rating-meal-summary');
     const ratingRiderName = document.getElementById('rating-rider-name');
     const submitRatingBtn = document.getElementById('submit-rate-btn');
 
@@ -1652,6 +1660,9 @@
             const statusDisplay = order.status_display || getStatusDisplay(order.status);
             const discountDisplay = order.discount_id ? `${order.discount_rate}%` : '无';
             const riderDisplay = order.rider_name || '未分配';
+            const mealsDisplay = (order.meal_summary && order.meal_summary.length > 0)
+                ? order.meal_summary
+                : (order.meals || []).map(meal => `${meal.name} x${meal.quantity}`).join('，');
 
             // 根据订单状态显示不同的操作按钮
             let actionButton = '';
@@ -1671,12 +1682,20 @@
                 const riderRating = order.rating.rider
                     ? `<span>骑手: ${order.rating.rider}</span>`
                     : '';
+                const mealRatings = (order.meals || []).map(meal => {
+                    const value = meal.rating ? meal.rating : '未评分';
+                    return `<span>${meal.name}: ${value}</span>`;
+                }).join('');
                 ratingCell = `
                     <div class="rating-summary">
-                        <span>商家: ${order.rating.merchant}</span>
-                        <span>餐品: ${order.rating.meal}</span>
-                        <span>平台: ${order.rating.platform}</span>
-                        ${riderRating}
+                        <div>
+                            <span>商家: ${order.rating.merchant}</span>
+                            <span>平台: ${order.rating.platform}</span>
+                            ${riderRating}
+                        </div>
+                        <div class="meal-rating-list" style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px;">
+                            ${mealRatings || '<span>暂无餐品评分</span>'}
+                        </div>
                     </div>
                 `;
             } else if (order.can_rate) {
@@ -1688,7 +1707,7 @@
                     <td>#${order.id}</td>
                     <td>${order.merchant_name}</td>
                     <td>${order.platform_name}</td>
-                    <td>${order.meal_name}</td>
+                    <td>${mealsDisplay || '—'}</td>
                     <td>¥${order.price}</td>
                     <td>${discountDisplay}</td>
                     <td>${riderDisplay}</td>
@@ -1722,10 +1741,31 @@
         rateOrderForm.reset();
         ratingMerchantName.textContent = order.merchant_name;
         ratingPlatformName.textContent = order.platform_name;
-        ratingMealName.textContent = order.meal_name;
+        const mealSummary = (order.meal_summary && order.meal_summary.length > 0)
+            ? order.meal_summary
+            : (order.meals || []).map(meal => `${meal.name} x${meal.quantity}`).join('，');
+        ratingMealSummary.textContent = mealSummary || '暂无餐品信息';
+        mealRatingFields.innerHTML = '';
+        (order.meals || []).forEach(meal => {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.gap = '8px';
+            wrapper.innerHTML = `
+                <span style="min-width: 160px;">${meal.name} (x${meal.quantity})</span>
+                <input type="number"
+                       min="0"
+                       max="5"
+                       step="0.5"
+                       class="rating-input meal-rating-input"
+                       data-order-item-id="${meal.id}"
+                       value="${meal.rating || 5}"
+                       required>
+            `;
+            mealRatingFields.appendChild(wrapper);
+        });
         ratingRiderName.textContent = order.rider_name || '未分配';
         merchantRatingInput.value = 5;
-        mealRatingInput.value = 5;
         platformRatingInput.value = 5;
         if (order.rider_name) {
             riderRatingRow.style.display = 'flex';
@@ -1748,11 +1788,22 @@
             return;
         }
         const csrfToken = getCSRFToken();
+        const mealRatings = [];
+        document.querySelectorAll('#meal-rating-fields .meal-rating-input').forEach(input => {
+            mealRatings.push({
+                order_item_id: input.getAttribute('data-order-item-id'),
+                rating: input.value
+            });
+        });
+        if (mealRatings.length === 0) {
+            alert('订单中没有可评分的餐品');
+            return;
+        }
         const payload = {
             merchant_rating: merchantRatingInput.value,
-            meal_rating: mealRatingInput.value,
             platform_rating: platformRatingInput.value,
-            rider_rating: riderRatingRow.style.display === 'none' ? '' : riderRatingInput.value
+            rider_rating: riderRatingRow.style.display === 'none' ? '' : riderRatingInput.value,
+            meal_ratings: mealRatings
         };
 
         submitRatingBtn.disabled = true;
