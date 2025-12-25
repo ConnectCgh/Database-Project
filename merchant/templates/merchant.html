@@ -754,7 +754,7 @@
                                     <td>#{{ order.id }}</td>
                                     <td>{{ order.customer.customer_name }}</td>
                                     <td>{{ order.platform.platform_name }}</td>
-                                    <td>{{ order.meal.name }}</td>
+                                    <td>{{ order.meal_summary }}</td>
                                     <td>¥{{ order.price }}</td>
                                     <td>
                                         {% if order.rider %}
@@ -782,7 +782,7 @@
                                             {% if order.status == 'unassigned' %}
                                                 <button class="btn delete-order-btn"
                                                         data-order-id="{{ order.id }}"
-                                                        data-order-info="订单 #{{ order.id }} - {{ order.meal.name }}">
+                                                    data-order-info="订单 #{{ order.id }} - {{ order.meal_summary }}">
                                                     删除
                                                 </button>
                                             {% endif %}
@@ -1090,7 +1090,7 @@
                                 <td>#${order.id}</td>
                                 <td>${order.customer_name}</td>
                                 <td>${order.platform_name}</td>
-                                <td>${order.meal_name}</td>
+                                <td>${order.meal_summary || '—'}</td>
                                 <td>¥${order.price}</td>
                                 <td>${order.rider_name || '-'}</td>
                                 <td>
@@ -1102,7 +1102,7 @@
                                         ${order.status === 'unassigned' ?
                                             `<button class="btn delete-order-btn"
                                                     data-order-id="${order.id}"
-                                                    data-order-info="订单 #${order.id} - ${order.meal_name}">
+                                                    data-order-info="订单 #${order.id} - ${order.meal_summary || ''}">
                                                 删除
                                             </button>` : ''}
                                     </div>
@@ -1136,7 +1136,7 @@
         // 退出登录
         document.querySelector('.logout-btn').addEventListener('click', function() {
             if (confirm('确定要退出登录吗？')) {
-                window.location.href = '/';
+                window.location.href = '/login/';
             }
         });
 
@@ -1827,7 +1827,7 @@
         // 退出登录
         document.querySelector('.logout-btn').addEventListener('click', function() {
             if (confirm('确定要退出登录吗？')) {
-                window.location.href = '/';
+                window.location.href = '/login/';
             }
         });
 

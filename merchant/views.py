@@ -1,621 +1,634 @@
+from decimal import Decimal, InvalidOperation
+
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
-from django.utils import timezone
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-from meal.models import Meal
-from login.models import Platform, Merchant, EnterRequest, MerchantPlatformDiscount
-from discount.models import Discount
-from order.models import Order
+from Project.db_utils import (
+    execute_fetchall,
+    execute_fetchone,
+    execute_non_query,
+    execute_write,
+    get_merchant_by_user,
+    quote_table,
+)
+
+
+MEAL_TYPE_DISPLAY = {
+    'breakfast': '早餐',
+    'lunch': '午餐',
+    'dinner': '晚餐',
+    'lunch_and_dinner': '午餐和晚餐',
+}
+
+ORDER_STATUS_DISPLAY = {
+    'unassigned': '未分配骑手',
+    'assigned': '已分配骑手',
+    'ready': '顾客待取餐',
+    'completed': '已完成',
+    'cancelled': '已取消',
+}
+
+PLATFORM_TABLE = quote_table('platform')
+ORDER_TABLE = quote_table('order')
+ORDER_ITEM_TABLE = quote_table('order_item')
+
+
+def _build_in_clause(values):
+    return ','.join(['%s'] * len(values))
+ORDER_ITEM_TABLE = quote_table('order_item')
+
+
+def _get_merchant(user):
+    merchant = get_merchant_by_user(user.id)
+    if not merchant:
+        raise ValueError('商家信息不存在')
+    return merchant
+
+
+def _get_platform(platform_id):
+    query = f'SELECT id, platform_name, phone FROM {PLATFORM_TABLE} WHERE id = %s'
+    return execute_fetchone(query, [platform_id])
+
+
+def _get_platforms_by_status(merchant_id, status):
+    query = f'''
+        SELECT p.id, p.platform_name, p.phone
+        FROM enter_request er
+        JOIN {PLATFORM_TABLE} p ON er.platform_id = p.id
+        WHERE er.merchant_id = %s AND er.status = %s
+        ORDER BY p.platform_name
+    '''
+    return execute_fetchall(query, [merchant_id, status])
+
+
+def _merchant_joined_platform(merchant_id, platform_id):
+    query = '''
+        SELECT id
+        FROM enter_request
+        WHERE merchant_id = %s AND platform_id = %s AND status = 'approved'
+    '''
+    return execute_fetchone(query, [merchant_id, platform_id]) is not None
+
+
+def _get_meal(merchant_id, meal_id):
+    query = '''
+        SELECT id, name, price, meal_type, platform_id
+        FROM meal
+        WHERE id = %s AND merchant_id = %s
+    '''
+    return execute_fetchone(query, [meal_id, merchant_id])
+
+
+def _format_meals_for_context(meals):
+    formatted = []
+    for meal in meals:
+        formatted.append({
+            'id': meal['id'],
+            'name': meal['name'],
+            'price': meal['price'],
+            'meal_type': meal['meal_type'],
+            'get_meal_type_display': MEAL_TYPE_DISPLAY.get(meal['meal_type'], meal['meal_type']),
+            'platform': {
+                'id': meal['platform_id'],
+                'platform_name': meal['platform_name'],
+            },
+            'created_at': meal['created_at'],
+        })
+    return formatted
+
+
+def _get_meals_for_merchant(merchant_id):
+    query = f'''
+        SELECT meal.id,
+               meal.name,
+               meal.price,
+               meal.meal_type,
+               meal.created_at,
+               p.id AS platform_id,
+               p.platform_name
+        FROM meal
+        JOIN {PLATFORM_TABLE} p ON meal.platform_id = p.id
+        WHERE meal.merchant_id = %s
+        ORDER BY meal.created_at DESC
+    '''
+    return execute_fetchall(query, [merchant_id])
+
+
+def _get_discounts_for_merchant(merchant_id):
+    query = f'''
+        SELECT mpd.id,
+               mpd.updated_at,
+               p.id AS platform_id,
+               p.platform_name,
+               d.id AS discount_id,
+               d.discount_rate
+        FROM merchant_platform_discount mpd
+        JOIN {PLATFORM_TABLE} p ON mpd.platform_id = p.id
+        JOIN discount d ON mpd.discount_id = d.id
+        WHERE mpd.merchant_id = %s
+        ORDER BY mpd.updated_at DESC
+    '''
+    rows = execute_fetchall(query, [merchant_id])
+    formatted = []
+    for row in rows:
+        formatted.append({
+            'id': row['id'],
+            'platform': {
+                'id': row['platform_id'],
+                'platform_name': row['platform_name'],
+            },
+            'discount': {
+                'id': row['discount_id'],
+                'discount_rate': row['discount_rate'],
+            },
+            'updated_at': row['updated_at'],
+        })
+    return formatted
+
+
+def _get_available_discounts():
+    return execute_fetchall('SELECT id, discount_rate FROM discount ORDER BY discount_rate')
+
+
+def _get_orders_for_merchant(merchant_id):
+    query = f'''
+        SELECT o.id,
+               o.price,
+               o.status,
+               o.created_at,
+               o.customer_id,
+               c.customer_name,
+               o.platform_id,
+               p.platform_name,
+               o.rider_id,
+               r.rider_name,
+               d.id AS discount_id,
+               d.discount_rate
+        FROM {ORDER_TABLE} o
+        JOIN customer c ON o.customer_id = c.id
+        JOIN {PLATFORM_TABLE} p ON o.platform_id = p.id
+        LEFT JOIN rider r ON o.rider_id = r.id
+        LEFT JOIN discount d ON o.discount_id = d.id
+        WHERE o.merchant_id = %s
+        ORDER BY o.created_at DESC
+    '''
+    orders = execute_fetchall(query, [merchant_id])
+    if not orders:
+        return []
+
+    order_map = {order['id']: order for order in orders}
+    for order in order_map.values():
+        order['meals'] = []
+
+    order_ids = list(order_map.keys())
+    placeholders = _build_in_clause(order_ids)
+    items_query = f'''
+        SELECT oi.id,
+               oi.order_id,
+               meal.name AS meal_name,
+               oi.quantity,
+               oi.unit_price,
+               oi.line_price
+        FROM {ORDER_ITEM_TABLE} oi
+        JOIN meal ON oi.meal_id = meal.id
+        WHERE oi.order_id IN ({placeholders})
+        ORDER BY oi.id
+    '''
+    items = execute_fetchall(items_query, order_ids)
+    for item in items:
+        order_map[item['order_id']]['meals'].append({
+            'item_id': item['id'],
+            'name': item['meal_name'],
+            'quantity': item['quantity'],
+            'unit_price': item['unit_price'],
+            'line_price': item['line_price'],
+        })
+
+    return orders
+
+
+def _format_meal_summary(meals):
+    if not meals:
+        return ''
+    return ', '.join(f"{meal['name']} x{meal['quantity']}" for meal in meals)
+
+
+def _format_orders_for_context(order_rows):
+    formatted = []
+    for row in order_rows:
+        formatted.append({
+            'id': row['id'],
+            'price': row['price'],
+            'status': row['status'],
+            'get_status_display': ORDER_STATUS_DISPLAY.get(row['status'], row['status']),
+            'created_at': row['created_at'],
+            'customer': {'customer_name': row['customer_name']},
+            'platform': {'platform_name': row['platform_name']},
+            'meals': row.get('meals', []),
+            'meal_summary': _format_meal_summary(row.get('meals', [])),
+            'rider': {'rider_name': row['rider_name']} if row['rider_name'] else None,
+            'discount': {'discount_rate': row['discount_rate']} if row['discount_id'] else None,
+        })
+    return formatted
+
+
+def _format_orders_for_payload(order_rows):
+    formatted = []
+    for row in order_rows:
+        formatted.append({
+            'id': row['id'],
+            'customer_name': row['customer_name'],
+            'platform_name': row['platform_name'],
+            'price': str(row['price']),
+            'rider_name': row['rider_name'],
+            'status': row['status'],
+            'created_at': row['created_at'].strftime('%Y-%m-%d %H:%M') if row['created_at'] else '',
+            'discount_rate': str(row['discount_rate']) if row['discount_id'] else None,
+            'meals': [{
+                'name': meal['name'],
+                'quantity': meal['quantity'],
+                'unit_price': str(meal['unit_price']),
+                'line_price': str(meal['line_price']),
+            } for meal in row.get('meals', [])],
+            'meal_summary': _format_meal_summary(row.get('meals', [])),
+        })
+    return formatted
+
+
+def _get_discount(discount_id):
+    return execute_fetchone('SELECT id, discount_rate FROM discount WHERE id = %s', [discount_id])
 
 
 @login_required
 @csrf_exempt
 def apply_platform(request):
-    if request.method == 'POST':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取平台ID
-            platform_id = request.POST.get('platform_id')
+    try:
+        merchant = _get_merchant(request.user)
+        platform_id = request.POST.get('platform_id')
+        if not platform_id:
+            return JsonResponse({'success': False, 'message': '平台ID不能为空'})
 
-            if not platform_id:
-                return JsonResponse({
-                    'success': False,
-                    'message': '平台ID不能为空'
-                })
+        platform = _get_platform(platform_id)
+        if not platform:
+            return JsonResponse({'success': False, 'message': '平台不存在'})
 
-            # 获取平台对象
-            platform = get_object_or_404(Platform, id=platform_id)
+        existing = execute_fetchone(
+            'SELECT id, status FROM enter_request WHERE merchant_id = %s AND platform_id = %s',
+            [merchant['id'], platform_id],
+        )
 
-            # 检查是否已经申请过
-            existing_request = EnterRequest.objects.filter(
-                merchant=current_merchant,
-                platform=platform
-            ).first()
+        if existing:
+            status = existing['status']
+            if status == 'pending':
+                return JsonResponse({'success': False, 'message': '您已经提交过入驻申请，请等待审核'})
+            if status == 'approved':
+                return JsonResponse({'success': False, 'message': '您已经成功入驻该平台'})
+            if status == 'rejected':
+                execute_non_query('UPDATE enter_request SET status = %s WHERE id = %s', ['pending', existing['id']])
+                return JsonResponse({'success': True, 'message': '入驻申请已重新提交'})
 
-            if existing_request:
-                if existing_request.status == 'pending':
-                    return JsonResponse({
-                        'success': False,
-                        'message': '您已经提交过入驻申请，请等待审核'
-                    })
-                elif existing_request.status == 'approved':
-                    return JsonResponse({
-                        'success': False,
-                        'message': '您已经成功入驻该平台'
-                    })
-                elif existing_request.status == 'rejected':
-                    # 如果是被拒绝的申请，可以重新提交
-                    existing_request.status = 'pending'
-                    existing_request.save()
-
-                    return JsonResponse({
-                        'success': True,
-                        'message': '入驻申请已重新提交'
-                    })
-
-            # 创建新的入驻申请
-            enter_request = EnterRequest.objects.create(
-                merchant=current_merchant,
-                platform=platform,
-                status='pending'
-            )
-
-            return JsonResponse({
-                'success': True,
-                'message': '入驻申请提交成功，请等待平台审核'
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'申请失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        execute_write(
+            'INSERT INTO enter_request (merchant_id, platform_id, status) VALUES (%s, %s, %s)',
+            [merchant['id'], platform_id, 'pending'],
+        )
+        return JsonResponse({'success': True, 'message': '入驻申请提交成功，请等待平台审核'})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'申请失败: {str(exc)}'})
 
 
 @login_required
 def add_meal(request):
-    if request.method == 'POST':
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
+
+    try:
+        merchant = _get_merchant(request.user)
+        name = request.POST.get('meal-name')
+        price = request.POST.get('meal-price')
+        meal_type = request.POST.get('meal-type')
+        platform_id = request.POST.get('platform-id')
+
+        if not all([name, price, meal_type, platform_id]):
+            return JsonResponse({'success': False, 'message': '请填写所有必填字段'})
+
+        platform = _get_platform(platform_id)
+        if not platform:
+            return JsonResponse({'success': False, 'message': '平台不存在'})
+
+        if not _merchant_joined_platform(merchant['id'], platform_id):
+            return JsonResponse({'success': False, 'message': '您尚未入驻该平台，无法添加餐品'})
+
         try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+            Decimal(price)
+        except (InvalidOperation, TypeError):
+            return JsonResponse({'success': False, 'message': '价格格式不正确'})
 
-            # 获取表单数据
-            name = request.POST.get('meal-name')
-            price = request.POST.get('meal-price')
-            meal_type = request.POST.get('meal-type')
-            platform_id = request.POST.get('platform-id')
-
-            # 数据验证
-            if not all([name, price, meal_type, platform_id]):
-                return JsonResponse({
-                    'success': False,
-                    'message': '请填写所有必填字段'
-                })
-
-            # 获取平台对象
-            platform = get_object_or_404(Platform, id=platform_id)
-
-            # 检查商家是否已入驻该平台
-            if not EnterRequest.objects.filter(
-                    merchant=current_merchant,
-                    platform=platform,
-                    status='approved'
-            ).exists():
-                return JsonResponse({
-                    'success': False,
-                    'message': '您尚未入驻该平台，无法添加餐品'
-                })
-
-            # 创建餐品记录
-            meal = Meal.objects.create(
-                merchant=current_merchant,
-                platform=platform,
-                name=name,
-                price=price,
-                meal_type=meal_type
-            )
-
-            return JsonResponse({
-                'success': True,
-                'message': '餐品添加成功',
-                'meal_id': meal.id
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'添加失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        query = '''
+            INSERT INTO meal (merchant_id, platform_id, name, price, meal_type, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        '''
+        meal_id = execute_write(query, [merchant['id'], platform_id, name, price, meal_type])
+        return JsonResponse({'success': True, 'message': '餐品添加成功', 'meal_id': meal_id})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'添加失败: {str(exc)}'})
 
 
 @login_required
 def edit_meal(request, meal_id):
-    if request.method == 'POST':
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
+
+    try:
+        merchant = _get_merchant(request.user)
+        meal = _get_meal(merchant['id'], meal_id)
+        if not meal:
+            return JsonResponse({'success': False, 'message': '餐品不存在'})
+
+        name = request.POST.get('meal-name')
+        price = request.POST.get('meal-price')
+        meal_type = request.POST.get('meal-type')
+        platform_id = request.POST.get('platform-id')
+
+        if not all([name, price, meal_type, platform_id]):
+            return JsonResponse({'success': False, 'message': '请填写所有必填字段'})
+
+        if not _merchant_joined_platform(merchant['id'], platform_id):
+            return JsonResponse({'success': False, 'message': '您尚未入驻该平台，无法修改餐品'})
+
         try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+            Decimal(price)
+        except (InvalidOperation, TypeError):
+            return JsonResponse({'success': False, 'message': '价格格式不正确'})
 
-            # 获取餐品对象，确保属于当前商家
-            meal = get_object_or_404(Meal, id=meal_id, merchant=current_merchant)
-
-            # 获取表单数据
-            name = request.POST.get('meal-name')
-            price = request.POST.get('meal-price')
-            meal_type = request.POST.get('meal-type')
-            platform_id = request.POST.get('platform-id')
-
-            # 数据验证
-            if not all([name, price, meal_type, platform_id]):
-                return JsonResponse({
-                    'success': False,
-                    'message': '请填写所有必填字段'
-                })
-
-            # 获取平台对象
-            platform = get_object_or_404(Platform, id=platform_id)
-
-            # 检查商家是否已入驻该平台
-            if not EnterRequest.objects.filter(
-                    merchant=current_merchant,
-                    platform=platform,
-                    status='approved'
-            ).exists():
-                return JsonResponse({
-                    'success': False,
-                    'message': '您尚未入驻该平台，无法修改餐品'
-                })
-
-            # 更新餐品记录
-            meal.name = name
-            meal.price = price
-            meal.meal_type = meal_type
-            meal.platform = platform
-            meal.save()
-
-            return JsonResponse({
-                'success': True,
-                'message': '餐品更新成功',
-                'meal_id': meal.id
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'更新失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        query = '''
+            UPDATE meal
+            SET name = %s,
+                price = %s,
+                meal_type = %s,
+                platform_id = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND merchant_id = %s
+        '''
+        execute_non_query(query, [name, price, meal_type, platform_id, meal_id, merchant['id']])
+        return JsonResponse({'success': True, 'message': '餐品更新成功', 'meal_id': meal_id})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'更新失败: {str(exc)}'})
 
 
 @login_required
 def delete_meal(request, meal_id):
-    if request.method == 'POST':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取餐品对象，确保属于当前商家
-            meal = get_object_or_404(Meal, id=meal_id, merchant=current_merchant)
+    try:
+        merchant = _get_merchant(request.user)
+        meal = _get_meal(merchant['id'], meal_id)
+        if not meal:
+            return JsonResponse({'success': False, 'message': '餐品不存在'})
 
-            # 删除餐品
-            meal.delete()
-
-            return JsonResponse({
-                'success': True,
-                'message': '餐品删除成功'
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'删除失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        execute_non_query('DELETE FROM meal WHERE id = %s AND merchant_id = %s', [meal_id, merchant['id']])
+        return JsonResponse({'success': True, 'message': '餐品删除成功'})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'删除失败: {str(exc)}'})
 
 
 @login_required
 def get_meals(request):
-    if request.method == 'GET':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取当前商家的所有餐品
-            meals = Meal.objects.filter(merchant=current_merchant).order_by('-created_at')
-
-            # 序列化餐品数据
-            meals_data = []
-            for meal in meals:
-                meals_data.append({
-                    'id': meal.id,
-                    'name': meal.name,
-                    'price': str(meal.price),  # 转换为字符串避免序列化问题
-                    'meal_type': meal.meal_type,
-                    'platform_id': meal.platform.id,
-                    'platform_name': meal.platform.platform_name,
-                    'created_at': meal.created_at.strftime('%Y-%m-%d %H:%M')
-                })
-
-            return JsonResponse({
-                'success': True,
-                'meals': meals_data
+    try:
+        merchant = _get_merchant(request.user)
+        meals = _get_meals_for_merchant(merchant['id'])
+        formatted = []
+        for meal in meals:
+            formatted.append({
+                'id': meal['id'],
+                'name': meal['name'],
+                'price': str(meal['price']),
+                'meal_type': meal['meal_type'],
+                'platform_id': meal['platform_id'],
+                'platform_name': meal['platform_name'],
+                'created_at': meal['created_at'].strftime('%Y-%m-%d %H:%M') if meal['created_at'] else '',
+                'meal_type_display': MEAL_TYPE_DISPLAY.get(meal['meal_type'], meal['meal_type']),
             })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'获取餐品失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        return JsonResponse({'success': True, 'meals': formatted})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'获取餐品失败: {str(exc)}'})
 
 
 @login_required
 def set_discount(request):
-    if request.method == 'POST':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取表单数据
-            platform_id = request.POST.get('platform-id')
-            discount_id = request.POST.get('discount-id')
+    try:
+        merchant = _get_merchant(request.user)
+        platform_id = request.POST.get('platform-id')
+        discount_id = request.POST.get('discount-id')
 
-            # 数据验证
-            if not all([platform_id, discount_id]):
-                return JsonResponse({
-                    'success': False,
-                    'message': '请填写所有必填字段'
-                })
+        if not all([platform_id, discount_id]):
+            return JsonResponse({'success': False, 'message': '请填写所有必填字段'})
 
-            # 获取平台对象
-            platform = get_object_or_404(Platform, id=platform_id)
+        if not _merchant_joined_platform(merchant['id'], platform_id):
+            return JsonResponse({'success': False, 'message': '您尚未入驻该平台，无法设置折扣'})
 
-            # 检查商家是否已入驻该平台
-            if not EnterRequest.objects.filter(
-                    merchant=current_merchant,
-                    platform=platform,
-                    status='approved'
-            ).exists():
-                return JsonResponse({
-                    'success': False,
-                    'message': '您尚未入驻该平台，无法设置折扣'
-                })
+        discount = _get_discount(discount_id)
+        if not discount:
+            return JsonResponse({'success': False, 'message': '折扣不存在'})
 
-            # 获取折扣对象
-            discount = get_object_or_404(Discount, id=discount_id)
+        existing = execute_fetchone(
+            'SELECT id FROM merchant_platform_discount WHERE merchant_id = %s AND platform_id = %s',
+            [merchant['id'], platform_id],
+        )
 
-            # 创建或更新商家平台折扣关系
-            merchant_discount, created = MerchantPlatformDiscount.objects.update_or_create(
-                merchant=current_merchant,
-                platform=platform,
-                defaults={'discount': discount}
+        if existing:
+            execute_non_query(
+                'UPDATE merchant_platform_discount SET discount_id = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s',
+                [discount_id, existing['id']],
+            )
+            discount_id = existing['id']
+        else:
+            discount_id = execute_write(
+                '''
+                INSERT INTO merchant_platform_discount
+                (merchant_id, platform_id, discount_id, created_at, updated_at)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ''',
+                [merchant['id'], platform_id, discount_id],
             )
 
-            return JsonResponse({
-                'success': True,
-                'message': '折扣设置成功',
-                'discount_id': merchant_discount.id
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'设置失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        return JsonResponse({'success': True, 'message': '折扣设置成功', 'discount_id': discount_id})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'设置失败: {str(exc)}'})
 
 
 @login_required
 def edit_discount(request, discount_id):
-    if request.method == 'POST':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取折扣关系对象，确保属于当前商家
-            merchant_discount = get_object_or_404(
-                MerchantPlatformDiscount,
-                id=discount_id,
-                merchant=current_merchant
-            )
+    try:
+        merchant = _get_merchant(request.user)
+        merchant_discount = execute_fetchone(
+            '''
+            SELECT id
+            FROM merchant_platform_discount
+            WHERE id = %s AND merchant_id = %s
+            ''',
+            [discount_id, merchant['id']],
+        )
+        if not merchant_discount:
+            return JsonResponse({'success': False, 'message': '折扣不存在'})
 
-            # 获取表单数据
-            new_discount_id = request.POST.get('discount-id')
+        new_discount_id = request.POST.get('discount-id')
+        if not new_discount_id:
+            return JsonResponse({'success': False, 'message': '折扣不能为空'})
 
-            # 数据验证
-            if not new_discount_id:
-                return JsonResponse({
-                    'success': False,
-                    'message': '折扣不能为空'
-                })
+        if not _get_discount(new_discount_id):
+            return JsonResponse({'success': False, 'message': '折扣不存在'})
 
-            # 获取新的折扣对象
-            new_discount = get_object_or_404(Discount, id=new_discount_id)
-
-            # 更新折扣关系
-            merchant_discount.discount = new_discount
-            merchant_discount.save()
-
-            return JsonResponse({
-                'success': True,
-                'message': '折扣更新成功',
-                'discount_id': merchant_discount.id
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'更新失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        execute_non_query(
+            '''
+            UPDATE merchant_platform_discount
+            SET discount_id = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            ''',
+            [new_discount_id, discount_id],
+        )
+        return JsonResponse({'success': True, 'message': '折扣更新成功', 'discount_id': discount_id})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'更新失败: {str(exc)}'})
 
 
 @login_required
 def delete_discount(request, discount_id):
-    if request.method == 'POST':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取折扣关系对象，确保属于当前商家
-            merchant_discount = get_object_or_404(
-                MerchantPlatformDiscount,
-                id=discount_id,
-                merchant=current_merchant
-            )
+    try:
+        merchant = _get_merchant(request.user)
+        merchant_discount = execute_fetchone(
+            'SELECT id FROM merchant_platform_discount WHERE id = %s AND merchant_id = %s',
+            [discount_id, merchant['id']],
+        )
+        if not merchant_discount:
+            return JsonResponse({'success': False, 'message': '折扣不存在'})
 
-            # 删除折扣关系
-            merchant_discount.delete()
-
-            return JsonResponse({
-                'success': True,
-                'message': '折扣删除成功'
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'删除失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        execute_non_query('DELETE FROM merchant_platform_discount WHERE id = %s', [discount_id])
+        return JsonResponse({'success': True, 'message': '折扣删除成功'})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'删除失败: {str(exc)}'})
 
 
 @login_required
 def get_discounts(request):
-    if request.method == 'GET':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取当前商家的所有折扣设置
-            discounts = MerchantPlatformDiscount.objects.filter(
-                merchant=current_merchant
-            ).select_related('platform', 'discount').order_by('-updated_at')
-
-            # 序列化折扣数据
-            discounts_data = []
-            for discount in discounts:
-                discounts_data.append({
-                    'id': discount.id,
-                    'platform_id': discount.platform.id,
-                    'platform_name': discount.platform.platform_name,
-                    'discount_id': discount.discount.id,
-                    'discount_rate': str(discount.discount.discount_rate),
-                    'updated_at': discount.updated_at.strftime('%Y-%m-%d %H:%M')
-                })
-
-            return JsonResponse({
-                'success': True,
-                'discounts': discounts_data
+    try:
+        merchant = _get_merchant(request.user)
+        discounts = _get_discounts_for_merchant(merchant['id'])
+        payload = []
+        for discount in discounts:
+            payload.append({
+                'id': discount['id'],
+                'platform_id': discount['platform']['id'],
+                'platform_name': discount['platform']['platform_name'],
+                'discount_id': discount['discount']['id'],
+                'discount_rate': str(discount['discount']['discount_rate']),
+                'updated_at': discount['updated_at'].strftime('%Y-%m-%d %H:%M') if discount['updated_at'] else '',
             })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'获取折扣数据失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        return JsonResponse({'success': True, 'discounts': payload})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'获取折扣数据失败: {str(exc)}'})
 
 
-# 订单管理相关视图
 @login_required
 def get_orders(request):
-    """获取当前商家的所有订单"""
-    if request.method == 'GET':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取当前商家的所有订单
-            orders = Order.objects.filter(merchant=current_merchant).select_related(
-                'customer', 'platform', 'meal', 'rider', 'discount'
-            ).order_by('-created_at')
-
-            # 序列化订单数据
-            orders_data = []
-            for order in orders:
-                orders_data.append({
-                    'id': order.id,
-                    'customer_name': order.customer.customer_name,
-                    'platform_name': order.platform.platform_name,
-                    'meal_name': order.meal.name,
-                    'price': str(order.price),
-                    'rider_name': order.rider.rider_name if order.rider else None,
-                    'status': order.status,
-                    'created_at': order.created_at.strftime('%Y-%m-%d %H:%M'),
-                    'discount_rate': str(order.discount.discount_rate) if order.discount else None
-                })
-
-            return JsonResponse({
-                'success': True,
-                'orders': orders_data
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'获取订单失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+    try:
+        merchant = _get_merchant(request.user)
+        order_rows = _get_orders_for_merchant(merchant['id'])
+        return JsonResponse({'success': True, 'orders': _format_orders_for_payload(order_rows)})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'获取订单失败: {str(exc)}'})
 
 
 @login_required
 @csrf_exempt
 def delete_order(request, order_id):
-    """删除待分配骑手的订单"""
-    if request.method == 'POST':
-        try:
-            # 获取当前商家
-            current_merchant = Merchant.objects.get(user_profile__user=request.user)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '无效的请求方法'})
 
-            # 获取订单对象，确保属于当前商家
-            order = get_object_or_404(Order, id=order_id, merchant=current_merchant)
+    try:
+        merchant = _get_merchant(request.user)
+        order_query = f'SELECT id, status FROM {ORDER_TABLE} WHERE id = %s AND merchant_id = %s'
+        order = execute_fetchone(order_query, [order_id, merchant['id']])
+        if not order:
+            return JsonResponse({'success': False, 'message': '订单不存在'})
 
-            # 检查订单状态，只有待分配骑手的订单可以删除
-            if order.status != 'unassigned':
-                return JsonResponse({
-                    'success': False,
-                    'message': '只能删除待分配骑手的订单'
-                })
+        if order['status'] != 'unassigned':
+            return JsonResponse({'success': False, 'message': '只能删除待分配骑手的订单'})
 
-            # 删除订单
-            order.delete()
-
-            return JsonResponse({
-                'success': True,
-                'message': '订单删除成功'
-            })
-
-        except Merchant.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': '商家信息不存在'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'删除订单失败: {str(e)}'
-            })
-
-    return JsonResponse({'success': False, 'message': '无效的请求方法'})
+        execute_non_query(f'DELETE FROM {ORDER_TABLE} WHERE id = %s', [order_id])
+        return JsonResponse({'success': True, 'message': '订单删除成功'})
+    except ValueError:
+        return JsonResponse({'success': False, 'message': '商家信息不存在'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': f'删除订单失败: {str(exc)}'})
 
 
 @login_required
 def merchant(request):
-    # 直接从session获取用户名作为商家名
     merchant_name = request.session.get('merchant_name', request.user.username)
 
     try:
-        # 获取当前商家对象
-        current_merchant = Merchant.objects.get(user_profile__user=request.user)
+        current_merchant = _get_merchant(request.user)
+        meals = _format_meals_for_context(_get_meals_for_merchant(current_merchant['id']))
+        joined_platforms = _get_platforms_by_status(current_merchant['id'], 'approved')
+        applied_platforms = _get_platforms_by_status(current_merchant['id'], 'pending')
 
-        # 获取当前商家的所有餐品
-        meals = Meal.objects.filter(merchant=current_merchant).order_by('-created_at')
+        platform_query = f'SELECT id, platform_name, phone FROM {PLATFORM_TABLE} ORDER BY platform_name'
+        all_platforms = execute_fetchall(platform_query)
+        joined_ids = {platform['id'] for platform in joined_platforms}
+        applied_ids = {platform['id'] for platform in applied_platforms}
+        not_joined_platforms = [
+            platform for platform in all_platforms
+            if platform['id'] not in joined_ids and platform['id'] not in applied_ids
+        ]
 
-        # 获取所有平台
-        all_platforms = Platform.objects.all()
-
-        # 获取当前商家已入驻的平台（状态为approved）
-        joined_platforms = Platform.objects.filter(
-            enterrequest__merchant=current_merchant,
-            enterrequest__status='approved'
-        ).distinct()
-
-        # 获取当前商家已申请但未入驻的平台（状态为pending）
-        applied_platforms = Platform.objects.filter(
-            enterrequest__merchant=current_merchant,
-            enterrequest__status='pending'
-        ).distinct()
-
-        # 获取未申请的平台（排除已申请和已入驻的）
-        joined_platform_ids = joined_platforms.values_list('id', flat=True)
-        applied_platform_ids = applied_platforms.values_list('id', flat=True)
-        not_joined_platforms = all_platforms.exclude(
-            id__in=joined_platform_ids
-        ).exclude(
-            id__in=applied_platform_ids
-        )
-
-        # 获取当前商家的折扣设置
-        platform_discounts = MerchantPlatformDiscount.objects.filter(
-            merchant=current_merchant
-        ).select_related('platform', 'discount').order_by('-updated_at')
-
-        # 获取所有可用的折扣选项
-        available_discounts = Discount.objects.all().order_by('discount_rate')
-
-        # 获取当前商家的所有订单
-        orders = Order.objects.filter(merchant=current_merchant).select_related(
-            'customer', 'platform', 'meal', 'rider', 'discount'
-        ).order_by('-created_at')
-
-    except Merchant.DoesNotExist:
-        # 如果商家信息不存在，使用空列表
+        platform_discounts = _get_discounts_for_merchant(current_merchant['id'])
+        available_discounts = _get_available_discounts()
+        orders = _format_orders_for_context(_get_orders_for_merchant(current_merchant['id']))
+    except ValueError:
         meals = []
         joined_platforms = []
         applied_platforms = []
@@ -636,5 +649,4 @@ def merchant(request):
         'orders': orders,
         'merchant': current_merchant,
     }
-
     return render(request, 'merchant.html', context)

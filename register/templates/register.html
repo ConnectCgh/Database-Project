@@ -33,6 +33,16 @@
             margin-bottom: 20px;
         }
 
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #ffc107;
+            text-decoration: none;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
         .logo-icon {
             width: 80px;
             height: 80px;
@@ -317,6 +327,7 @@
 </head>
 <body>
     <div class="container">
+        <a href="{% url 'home' %}" class="back-home">← 返回 SpeedEats 主页</a>
         <div class="logo">
             <div class="logo-icon"></div>
             <div class="logo-text">SpeedEats</div>
@@ -395,7 +406,7 @@
 
                 <div class="terms">
                     <input type="checkbox" id="agree-terms" name="agree-terms" required>
-                    <label for="agree-terms">我已阅读并同意 <a href="#">服务条款</a> 和 <a href="#">隐私政策</a></label>
+                    <label for="agree-terms">我已阅读并同意 <a href="{% url 'terms' %}">服务条款</a> 和 <a href="{% url 'privacy' %}">隐私政策</a></label>
                 </div>
                 <div class="error-message" id="terms-error">请同意服务条款和隐私政策</div>
 
@@ -409,10 +420,10 @@
 
         <div class="footer">
             <ul class="footer-links">
-                <li><a href="#">条款</a></li>
-                <li><a href="#">隐私</a></li>
-                <li><a href="#">安全</a></li>
-                <li><a href="#">联系 SpeedEats</a></li>
+                <li><a href="{% url 'terms' %}">条款</a></li>
+                <li><a href="{% url 'privacy' %}">隐私</a></li>
+                <li><a href="{% url 'security' %}">安全</a></li>
+                <li><a href="{% url 'contact' %}">联系 SpeedEats</a></li>
             </ul>
         </div>
     </div>
@@ -423,6 +434,10 @@
         const usernameLabel = document.getElementById('username-label');
         const usernameInput = document.getElementById('username');
         const userTypeInput = document.getElementById('user-type-input');
+        const usernameError = document.getElementById('username-error');
+        const usernameSuccess = document.getElementById('username-success');
+        const checkUsernameUrl = "{% url 'check_username' %}";
+        let usernameCheckTimer = null;
 
         // 用户类型对应的标签文本
         const userTypeLabels = {
@@ -498,24 +513,59 @@
             }
         });
 
-        // 用户名可用性检查（模拟）
-        usernameInput.addEventListener('blur', function() {
-            const username = this.value;
-            const usernameError = document.getElementById('username-error');
-            const usernameSuccess = document.getElementById('username-success');
-
-            if (username.length < 2) {
-                usernameError.textContent = '用户名至少需要2个字符';
-                usernameError.style.display = 'block';
-                usernameSuccess.style.display = 'none';
-            } else if (username === 'admin' || username === 'test') {
-                usernameError.textContent = '该用户名已被使用';
+        function setUsernameStatus(type, text) {
+            if (type === 'success' || type === 'loading') {
+                usernameSuccess.textContent = text;
+                usernameSuccess.style.display = 'block';
+                usernameError.style.display = 'none';
+            } else if (type === 'error') {
+                usernameError.textContent = text;
                 usernameError.style.display = 'block';
                 usernameSuccess.style.display = 'none';
             } else {
                 usernameError.style.display = 'none';
-                usernameSuccess.style.display = 'block';
+                usernameSuccess.style.display = 'none';
             }
+        }
+
+        async function checkUsernameAvailability(value) {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                setUsernameStatus('error', '用户名不能为空');
+                return;
+            }
+            if (trimmed.length < 2) {
+                setUsernameStatus('error', '用户名至少需要2个字符');
+                return;
+            }
+            setUsernameStatus('loading', '正在检查可用性...');
+            try {
+                const response = await fetch(`${checkUsernameUrl}?username=${encodeURIComponent(trimmed)}`);
+                if (!response.ok) {
+                    throw new Error('network');
+                }
+                const data = await response.json();
+                if (data.available) {
+                    setUsernameStatus('success', '用户名可用');
+                } else {
+                    setUsernameStatus('error', '该用户名已被使用');
+                }
+            } catch (err) {
+                setUsernameStatus('error', '检查失败，请稍后再试');
+            }
+        }
+
+        usernameInput.addEventListener('input', function() {
+            clearTimeout(usernameCheckTimer);
+            usernameSuccess.style.display = 'none';
+            usernameError.style.display = 'none';
+            const value = this.value;
+            usernameCheckTimer = setTimeout(() => checkUsernameAvailability(value), 500);
+        });
+
+        usernameInput.addEventListener('blur', function() {
+            clearTimeout(usernameCheckTimer);
+            checkUsernameAvailability(this.value);
         });
 
         // 表单提交验证
@@ -529,9 +579,8 @@
             let isValid = true;
 
             // 重置错误消息
-            document.querySelectorAll('.error-message').forEach(el => {
-                el.style.display = 'none';
-            });
+            document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.success-message').forEach(el => el.style.display = 'none');
 
             // 验证用户名
             if (!username || username.length < 2) {

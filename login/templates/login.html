@@ -33,6 +33,16 @@
             margin-bottom: 20px;
         }
 
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #ffc107;
+            text-decoration: none;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
         .logo-icon {
             width: 80px;
             height: 80px;
@@ -324,6 +334,7 @@
 </head>
 <body>
     <div class="container">
+        <a href="{% url 'home' %}" class="back-home">← 返回 SpeedEats 主页</a>
         <div class="logo">
             <div class="logo-icon"></div>
             <div class="logo-text">SpeedEats</div>
@@ -379,7 +390,7 @@
                 <div class="form-group">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <label for="password">密码</label>
-                        <a href="#" class="forgot-password">忘记密码?</a>
+                        <a href="{% url 'forgot_password' %}" class="forgot-password">忘记密码?</a>
                     </div>
                     <input type="password" id="password" name="password" placeholder="请输入密码" required>
                     <div class="error-message" id="password-error">密码不能为空</div>
@@ -395,10 +406,10 @@
 
         <div class="footer">
             <ul class="footer-links">
-                <li><a href="#">条款</a></li>
-                <li><a href="#">隐私</a></li>
-                <li><a href="#">安全</a></li>
-                <li><a href="#">联系 SpeedEats</a></li>
+                <li><a href="{% url 'terms' %}">条款</a></li>
+                <li><a href="{% url 'privacy' %}">隐私</a></li>
+                <li><a href="{% url 'security' %}">安全</a></li>
+                <li><a href="{% url 'contact' %}">联系 SpeedEats</a></li>
             </ul>
         </div>
     </div>

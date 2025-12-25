@@ -609,7 +609,7 @@
                                     <td>{{ order.id }}</td>
                                     <td>{{ order.customer.customer_name }}</td>
                                     <td>{{ order.merchant.merchant_name }}</td>
-                                    <td>{{ order.meal.name }}</td>
+                                    <td>{{ order.meal_summary }}</td>
                                     <td>
                                         {% if order.rider %}
                                             {{ order.rider.rider_name }}
@@ -1134,7 +1134,7 @@
         // 退出登录
         document.querySelector('.logout-btn').addEventListener('click', function() {
             if (confirm('确定要退出登录吗？')) {
-                window.location.href = '/';
+                window.location.href = '/login/';
             }
         });
     </script>

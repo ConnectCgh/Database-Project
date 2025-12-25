@@ -272,6 +272,17 @@
             background-color: rgba(63, 185, 80, 0.2);
         }
 
+        .btn-primary {
+            background-color: #1f6feb;
+            color: #fff;
+            border-color: rgba(31, 111, 235, 0.4);
+        }
+
+        .btn-primary:hover {
+            background-color: #388bfd;
+            border-color: rgba(56, 139, 253, 0.4);
+        }
+
         /* 搜索筛选样式 */
         .search-filter {
             display: grid;
@@ -331,6 +342,18 @@
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
+        }
+
+        .merchant-rating {
+            text-align: right;
+            color: #f0f6fc;
+            font-size: 14px;
+        }
+
+        .rating-count {
+            color: #8b949e;
+            font-size: 12px;
+            margin-left: 4px;
         }
 
         .merchant-name {
@@ -400,6 +423,12 @@
             color: #8b949e;
         }
 
+        .platform-rating,
+        .meal-rating {
+            font-size: 12px;
+            color: #ffc107;
+        }
+
         .merchant-meals {
             margin-top: 8px;
         }
@@ -429,6 +458,58 @@
             font-size: 11px;
             color: #8b949e;
             margin-left: 8px;
+        }
+
+        .rating-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .rating-summary span {
+            font-size: 12px;
+            color: #c9d1d9;
+        }
+
+        .rating-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .rating-order-info {
+            font-size: 14px;
+            color: #c9d1d9;
+            line-height: 1.6;
+        }
+
+        .rating-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .rating-input-group label {
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        .rating-input {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 8px;
+            color: #f0f6fc;
+        }
+
+        .rating-input:focus {
+            outline: none;
+            border-color: #ffc107;
+        }
+
+        .rating-note {
+            font-size: 12px;
+            color: #8b949e;
         }
 
         /* 商家详情模态框 */
@@ -792,11 +873,17 @@
                         {% for merchant_data in merchants_with_platforms %}
                         <div class="merchant-card">
                             <div class="merchant-header">
-                                <div class="merchant-name">{{ merchant_data.merchant.merchant_name }}</div>
-                                <div class="merchant-platforms">
-                                    {% for platform in merchant_data.platforms %}
-                                    <span class="platform-tag">{{ platform.platform_name }}</span>
-                                    {% endfor %}
+                                <div>
+                                    <div class="merchant-name">{{ merchant_data.merchant.merchant_name }}</div>
+                                    <div class="merchant-platforms">
+                                        {% for platform in merchant_data.platforms %}
+                                        <span class="platform-tag">{{ platform.platform_name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="merchant-rating">
+                                    ⭐ {{ merchant_data.merchant.rating_score|floatformat:1 }} / 5
+                                    <span class="rating-count">({{ merchant_data.merchant.rating_count }}评)</span>
                                 </div>
                             </div>
                             <div class="merchant-info-details">
@@ -807,16 +894,25 @@
                             <div class="merchant-platforms-list">
                                 {% for platform_data in merchant_data.platforms_with_meals %}
                                 <div class="merchant-platform-item"
-                                     data-merchant-id="{{ merchant_data.merchant.id }}"
+                                    data-merchant-id="{{ merchant_data.merchant.id }}"
                                      data-platform-id="{{ platform_data.platform.id }}">
                                     <div class="platform-header">
-                                        <div class="platform-name">{{ platform_data.platform.platform_name }}</div>
-                                        <div class="platform-meal-count">{{ platform_data.meals_count }} 个餐品</div>
+                                        <div>
+                                            <div class="platform-name">{{ platform_data.platform.platform_name }}</div>
+                                            <div class="platform-meal-count">{{ platform_data.meals_count }} 个餐品</div>
+                                        </div>
+                                        <div class="platform-rating">
+                                            ⭐ {{ platform_data.platform.rating_score|floatformat:1 }} / 5
+                                            <span class="rating-count">({{ platform_data.platform.rating_count }}评)</span>
+                                        </div>
                                     </div>
                                     <div class="merchant-meals">
                                         {% for meal in platform_data.meals|slice:":2" %}
                                         <div class="meal-item">
-                                            <span class="meal-name">{{ meal.name }} <span class="meal-type">{{ meal.get_meal_type_display }}</span></span>
+                                            <div>
+                                                <span class="meal-name">{{ meal.name }} <span class="meal-type">{{ meal.get_meal_type_display }}</span></span>
+                                                <div class="meal-rating">⭐ {{ meal.rating_score }} / 5 ({{ meal.rating_count }}评)</div>
+                                            </div>
                                             <span class="meal-price">¥{{ meal.price }}</span>
                                         </div>
                                         {% endfor %}
@@ -859,6 +955,7 @@
                                     <th>骑手</th>
                                     <th>状态</th>
                                     <th>下单时间</th>
+                                    <th>评价</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
@@ -868,7 +965,7 @@
                                     <td>#{{ order.id }}</td>
                                     <td>{{ order.merchant.merchant_name }}</td>
                                     <td>{{ order.platform.platform_name }}</td>
-                                    <td>{{ order.meal.name }}</td>
+                                    <td>{{ order.meal_summary }}</td>
                                     <td>¥{{ order.price }}</td>
                                     <td>{% if order.discount %}{{ order.discount.discount_rate|floatformat:0 }}%{% else %}无{% endif %}</td>
                                     <td>{% if order.rider %}{{ order.rider.rider_name }}{% else %}未分配{% endif %}</td>
@@ -878,6 +975,32 @@
                                         </span>
                                     </td>
                                     <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if order.rating %}
+                                        <div class="rating-summary">
+                                            <div>
+                                                <span>商家: {{ order.rating.merchant }}</span>
+                                                <span>平台: {{ order.rating.platform }}</span>
+                                                {% if order.rating.rider %}
+                                                <span>骑手: {{ order.rating.rider }}</span>
+                                                {% endif %}
+                                            </div>
+                                            <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                                                {% for meal in order.meals %}
+                                                <span>{{ meal.name }}: {% if meal.rating %}{{ meal.rating }}{% else %}未评分{% endif %}</span>
+                                                {% empty %}
+                                                <span>暂无餐品评分</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% elif order.can_rate %}
+                                        <button class="btn btn-primary rate-order-btn" data-order-id="{{ order.id }}">
+                                            去评价
+                                        </button>
+                                        {% else %}
+                                        <span style="color: #8b949e; font-size: 12px;">暂无评分</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if order.status == 'ready' %}
                                         <button class="btn btn-success pickup-order-btn" data-order-id="{{ order.id }}">
@@ -894,7 +1017,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="10" style="text-align: center;">暂无订单记录</td>
+                                    <td colspan="11" style="text-align: center;">暂无订单记录</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -920,8 +1043,12 @@
                         <span id="detail-merchant-name"></span>
                         <span style="color: #8b949e;">电话:</span>
                         <span id="detail-merchant-phone"></span>
+                        <span style="color: #8b949e;">评分:</span>
+                        <span id="detail-merchant-rating"></span>
                         <span style="color: #8b949e;">平台:</span>
                         <span id="detail-merchant-platform"></span>
+                        <span style="color: #8b949e;">平台评分:</span>
+                        <span id="detail-platform-rating"></span>
                         <span style="color: #8b949e;">地址:</span>
                         <span id="detail-merchant-address"></span>
                     </div>
@@ -946,6 +1073,47 @@
                     总计: ¥0.00
                 </div>
                 <button class="btn" id="place-order-btn">确认下单</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 订单评分模态框 -->
+    <div id="rate-order-modal" class="modal">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="rating-order-title">订单评价</h3>
+                <button class="close-btn rating-close-btn">&times;</button>
+            </div>
+            <div class="modal-body rating-modal-body">
+                <div class="rating-order-info">
+                    <div>商家：<span id="rating-merchant-name"></span></div>
+                    <div>平台：<span id="rating-platform-name"></span></div>
+                    <div>餐品：<span id="rating-meal-summary"></span></div>
+                    <div>骑手：<span id="rating-rider-name">未分配</span></div>
+                </div>
+                <form id="rate-order-form">
+                    <div class="rating-input-group">
+                        <label for="merchant-rating-input">商家评分 (0-5)</label>
+                        <input type="number" min="0" max="5" step="0.5" id="merchant-rating-input" class="rating-input" required>
+                    </div>
+                    <div class="rating-input-group" id="meal-rating-container">
+                        <label>餐品评分 (0-5)</label>
+                        <div id="meal-rating-fields" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
+                    <div class="rating-input-group">
+                        <label for="platform-rating-input">平台评分 (0-5)</label>
+                        <input type="number" min="0" max="5" step="0.5" id="platform-rating-input" class="rating-input" required>
+                    </div>
+                    <div class="rating-input-group" id="rider-rating-row">
+                        <label for="rider-rating-input">骑手评分 (0-5)</label>
+                        <input type="number" min="0" max="5" step="0.5" id="rider-rating-input" class="rating-input">
+                    </div>
+                    <div class="rating-note">提示：评分将用于计算商家、餐品、平台及骑手的平均得分。</div>
+                    <div class="modal-footer" style="justify-content: flex-end; padding: 0;">
+                        <button type="button" class="btn" id="cancel-rate-btn" style="background-color: transparent; color: #c9d1d9; margin-right: 8px;">取消</button>
+                        <button type="submit" class="btn" id="submit-rate-btn">提交评分</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -997,6 +1165,22 @@
     let selectedDiscount = { id: '', rate: 0 };
     let currentMerchantId = null;
     let currentPlatformId = null;
+    let cachedOrders = [];
+    let currentRatingOrderId = null;
+    let pendingRatingOrderId = null;
+    const merchantDetailModal = document.getElementById('merchant-detail-modal');
+    const rateOrderModal = document.getElementById('rate-order-modal');
+    const rateOrderForm = document.getElementById('rate-order-form');
+    const merchantRatingInput = document.getElementById('merchant-rating-input');
+    const mealRatingFields = document.getElementById('meal-rating-fields');
+    const platformRatingInput = document.getElementById('platform-rating-input');
+    const riderRatingInput = document.getElementById('rider-rating-input');
+    const riderRatingRow = document.getElementById('rider-rating-row');
+    const ratingMerchantName = document.getElementById('rating-merchant-name');
+    const ratingPlatformName = document.getElementById('rating-platform-name');
+    const ratingMealSummary = document.getElementById('rating-meal-summary');
+    const ratingRiderName = document.getElementById('rating-rider-name');
+    const submitRatingBtn = document.getElementById('submit-rate-btn');
 
     // 商家平台条目点击事件
     document.addEventListener('click', function(e) {
@@ -1009,8 +1193,7 @@
             console.log(`点击商家平台: merchant_id=${currentMerchantId}, platform_id=${currentPlatformId}`);
 
             // 显示加载状态
-            const modal = document.getElementById('merchant-detail-modal');
-            modal.style.display = 'flex';
+            merchantDetailModal.style.display = 'flex';
 
             // 获取商家详情
             fetch(`/customer/get-merchant-detail/${currentMerchantId}/${currentPlatformId}/`)
@@ -1046,6 +1229,14 @@
         document.getElementById('detail-merchant-phone').textContent = merchant.phone;
         document.getElementById('detail-merchant-platform').textContent = platform.platform_name;
         document.getElementById('detail-merchant-address').textContent = merchant.address;
+        const merchantRatingEl = document.getElementById('detail-merchant-rating');
+        const platformRatingEl = document.getElementById('detail-platform-rating');
+        if (merchantRatingEl) {
+            merchantRatingEl.textContent = formatRatingLabel(merchant.rating_score, merchant.rating_count);
+        }
+        if (platformRatingEl) {
+            platformRatingEl.textContent = formatRatingLabel(platform.rating_score, platform.rating_count);
+        }
 
         // 更新餐品选项
         const mealContainer = document.getElementById('meal-options-container');
@@ -1063,6 +1254,7 @@
                         <div class="meal-details">
                             <div style="font-weight: 500;">${meal.name}</div>
                             <div style="font-size: 12px; color: #8b949e;">${getMealTypeDisplay(meal.meal_type)}</div>
+                            <div style="font-size: 12px; color: #ffc107;">⭐ ${formatRatingLabel(meal.rating_score, meal.rating_count)}</div>
                         </div>
                     </div>
                     <div class="meal-quantity">
@@ -1171,6 +1363,18 @@
         return typeMap[mealType] || mealType;
     }
 
+    function formatRatingLabel(score, count) {
+        const numeric = isNaN(parseFloat(score)) ? 0 : parseFloat(score);
+        const total = count || 0;
+        return `${numeric.toFixed(1)} / 5 (${total}评)`;
+    }
+
+    function formatRatingShort(score, count) {
+        const numeric = isNaN(parseFloat(score)) ? 0 : parseFloat(score);
+        const total = count || 0;
+        return `${numeric.toFixed(1)} (${total}评)`;
+    }
+
     // 更新总价
     function updateTotalPrice() {
         let total = 0;
@@ -1194,17 +1398,26 @@
         document.getElementById('total-price-display').textContent = `总计: ¥${total.toFixed(2)}`;
     }
 
-    // 关闭模态框
-    document.querySelector('.close-btn').addEventListener('click', function() {
-        document.getElementById('merchant-detail-modal').style.display = 'none';
+    // 关闭商家详情模态框
+    document.querySelector('#merchant-detail-modal .close-btn').addEventListener('click', function() {
+        merchantDetailModal.style.display = 'none';
     });
 
     // 点击模态框外部关闭
     window.addEventListener('click', function(e) {
-        const modal = document.getElementById('merchant-detail-modal');
-        if (e.target === modal) {
-            modal.style.display = 'none';
+        if (e.target === merchantDetailModal) {
+            merchantDetailModal.style.display = 'none';
         }
+        if (e.target === rateOrderModal) {
+            closeRatingModal();
+        }
+    });
+
+    document.querySelector('#rate-order-modal .close-btn').addEventListener('click', closeRatingModal);
+    document.getElementById('cancel-rate-btn').addEventListener('click', closeRatingModal);
+    rateOrderForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitRating();
     });
 
     // 下单功能
@@ -1266,7 +1479,7 @@
             .then(data => {
                 if (data.success) {
                     alert('下单成功！');
-                    document.getElementById('merchant-detail-modal').style.display = 'none';
+                    merchantDetailModal.style.display = 'none';
                     // 刷新订单列表
                     loadOrders();
                 } else {
@@ -1353,11 +1566,16 @@
             html += `
                 <div class="merchant-card">
                     <div class="merchant-header">
-                        <div class="merchant-name">${merchant.merchant_name}</div>
-                        <div class="merchant-platforms">
-                            ${allPlatforms.map(platform =>
-                                `<span class="platform-tag">${platform.platform_name}</span>`
-                            ).join('')}
+                        <div>
+                            <div class="merchant-name">${merchant.merchant_name}</div>
+                            <div class="merchant-platforms">
+                                ${allPlatforms.map(platform =>
+                                    `<span class="platform-tag">${platform.platform_name}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        <div class="merchant-rating">
+                            ⭐ ${formatRatingLabel(merchant.rating_score, merchant.rating_count)}
                         </div>
                     </div>
                     <div class="merchant-info-details">
@@ -1371,13 +1589,21 @@
                                  data-merchant-id="${merchant.id}"
                                  data-platform-id="${platformData.platform.id}">
                                 <div class="platform-header">
-                                    <div class="platform-name">${platformData.platform.platform_name}</div>
-                                    <div class="platform-meal-count">${platformData.meals_count} 个餐品</div>
+                                    <div>
+                                        <div class="platform-name">${platformData.platform.platform_name}</div>
+                                        <div class="platform-meal-count">${platformData.meals_count} 个餐品</div>
+                                    </div>
+                                    <div class="platform-rating">
+                                        ⭐ ${formatRatingLabel(platformData.platform.rating_score, platformData.platform.rating_count)}
+                                    </div>
                                 </div>
                                 <div class="merchant-meals">
                                     ${platformData.meals.slice(0, 2).map(meal => `
                                         <div class="meal-item">
-                                            <span class="meal-name">${meal.name} <span class="meal-type">${getMealTypeDisplay(meal.meal_type)}</span></span>
+                                            <div>
+                                                <span class="meal-name">${meal.name} <span class="meal-type">${getMealTypeDisplay(meal.meal_type)}</span></span>
+                                                <div class="meal-rating">⭐ ${formatRatingLabel(meal.rating_score, meal.rating_count)}</div>
+                                            </div>
                                             <span class="meal-price">¥${meal.price}</span>
                                         </div>
                                     `).join('')}
@@ -1403,7 +1629,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    updateOrdersTable(data.orders);
+                    cachedOrders = data.orders;
+                    updateOrdersTable(cachedOrders);
+                    if (pendingRatingOrderId) {
+                        const targetOrder = cachedOrders.find(order => String(order.id) === String(pendingRatingOrderId));
+                        if (targetOrder && targetOrder.can_rate) {
+                            openRatingModal(targetOrder);
+                            pendingRatingOrderId = null;
+                        }
+                    }
                 }
             })
             .catch(error => {
@@ -1416,16 +1650,19 @@
         const tableBody = document.getElementById('orders-table-body');
 
         if (orders.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="10" style="text-align: center;">暂无订单记录</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="11" style="text-align: center;">暂无订单记录</td></tr>';
             return;
         }
 
         let html = '';
         orders.forEach(order => {
             const statusClass = `status-${order.status}`;
-            const statusDisplay = getStatusDisplay(order.status);
+            const statusDisplay = order.status_display || getStatusDisplay(order.status);
             const discountDisplay = order.discount_id ? `${order.discount_rate}%` : '无';
-            const riderDisplay = order.rider_name || '-';
+            const riderDisplay = order.rider_name || '未分配';
+            const mealsDisplay = (order.meal_summary && order.meal_summary.length > 0)
+                ? order.meal_summary
+                : (order.meals || []).map(meal => `${meal.name} x${meal.quantity}`).join('，');
 
             // 根据订单状态显示不同的操作按钮
             let actionButton = '';
@@ -1440,12 +1677,37 @@
                 actionButton = '<span style="color: #8b949e; font-size: 12px;">不可操作</span>';
             }
 
+            let ratingCell = '<span style="color: #8b949e; font-size: 12px;">暂无评分</span>';
+            if (order.has_rating && order.rating) {
+                const riderRating = order.rating.rider
+                    ? `<span>骑手: ${order.rating.rider}</span>`
+                    : '';
+                const mealRatings = (order.meals || []).map(meal => {
+                    const value = meal.rating ? meal.rating : '未评分';
+                    return `<span>${meal.name}: ${value}</span>`;
+                }).join('');
+                ratingCell = `
+                    <div class="rating-summary">
+                        <div>
+                            <span>商家: ${order.rating.merchant}</span>
+                            <span>平台: ${order.rating.platform}</span>
+                            ${riderRating}
+                        </div>
+                        <div class="meal-rating-list" style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px;">
+                            ${mealRatings || '<span>暂无餐品评分</span>'}
+                        </div>
+                    </div>
+                `;
+            } else if (order.can_rate) {
+                ratingCell = `<button class="btn btn-primary rate-order-btn" data-order-id="${order.id}">去评价</button>`;
+            }
+
             html += `
                 <tr data-order-id="${order.id}">
                     <td>#${order.id}</td>
                     <td>${order.merchant_name}</td>
                     <td>${order.platform_name}</td>
-                    <td>${order.meal_name}</td>
+                    <td>${mealsDisplay || '—'}</td>
                     <td>¥${order.price}</td>
                     <td>${discountDisplay}</td>
                     <td>${riderDisplay}</td>
@@ -1453,6 +1715,7 @@
                         <span class="status-badge ${statusClass}">${statusDisplay}</span>
                     </td>
                     <td>${order.created_at}</td>
+                    <td>${ratingCell}</td>
                     <td>${actionButton}</td>
                 </tr>
             `;
@@ -1471,6 +1734,122 @@
             'cancelled': '已取消'
         };
         return statusMap[status] || status;
+    }
+
+    function openRatingModal(order) {
+        currentRatingOrderId = order.id;
+        rateOrderForm.reset();
+        ratingMerchantName.textContent = order.merchant_name;
+        ratingPlatformName.textContent = order.platform_name;
+        const mealSummary = (order.meal_summary && order.meal_summary.length > 0)
+            ? order.meal_summary
+            : (order.meals || []).map(meal => `${meal.name} x${meal.quantity}`).join('，');
+        ratingMealSummary.textContent = mealSummary || '暂无餐品信息';
+        mealRatingFields.innerHTML = '';
+        (order.meals || []).forEach(meal => {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.gap = '8px';
+            wrapper.innerHTML = `
+                <span style="min-width: 160px;">${meal.name} (x${meal.quantity})</span>
+                <input type="number"
+                       min="0"
+                       max="5"
+                       step="0.5"
+                       class="rating-input meal-rating-input"
+                       data-order-item-id="${meal.id}"
+                       value="${meal.rating || 5}"
+                       required>
+            `;
+            mealRatingFields.appendChild(wrapper);
+        });
+        ratingRiderName.textContent = order.rider_name || '未分配';
+        merchantRatingInput.value = 5;
+        platformRatingInput.value = 5;
+        if (order.rider_name) {
+            riderRatingRow.style.display = 'flex';
+            riderRatingInput.value = 5;
+        } else {
+            riderRatingRow.style.display = 'none';
+            riderRatingInput.value = '';
+        }
+        rateOrderModal.style.display = 'flex';
+    }
+
+    function closeRatingModal() {
+        rateOrderModal.style.display = 'none';
+        currentRatingOrderId = null;
+        rateOrderForm.reset();
+    }
+
+    function submitRating() {
+        if (!currentRatingOrderId) {
+            return;
+        }
+        const csrfToken = getCSRFToken();
+        const mealRatings = [];
+        document.querySelectorAll('#meal-rating-fields .meal-rating-input').forEach(input => {
+            mealRatings.push({
+                order_item_id: input.getAttribute('data-order-item-id'),
+                rating: input.value
+            });
+        });
+        if (mealRatings.length === 0) {
+            alert('订单中没有可评分的餐品');
+            return;
+        }
+        const payload = {
+            merchant_rating: merchantRatingInput.value,
+            platform_rating: platformRatingInput.value,
+            rider_rating: riderRatingRow.style.display === 'none' ? '' : riderRatingInput.value,
+            meal_ratings: mealRatings
+        };
+
+        submitRatingBtn.disabled = true;
+        submitRatingBtn.textContent = '提交中...';
+
+        fetch(`/customer/rate-order/${currentRatingOrderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || '评价成功');
+                closeRatingModal();
+                pendingRatingOrderId = null;
+                loadOrders();
+            } else {
+                alert('评价失败: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('网络错误，请重试');
+        })
+        .finally(() => {
+            submitRatingBtn.disabled = false;
+            submitRatingBtn.textContent = '提交评分';
+        });
+    }
+
+    function setupRateOrderHandlers() {
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('rate-order-btn')) {
+                const orderId = e.target.getAttribute('data-order-id');
+                const targetOrder = cachedOrders.find(order => String(order.id) === String(orderId));
+                if (targetOrder) {
+                    openRatingModal(targetOrder);
+                } else {
+                    alert('订单数据正在加载，请稍后再试');
+                }
+            }
+        });
     }
 
     // 删除订单功能
@@ -1532,7 +1911,7 @@
 
     // 取餐操作
     function pickupOrder(orderId) {
-        if (!confirm('确定要取餐吗？取餐后订单将被删除。')) {
+        if (!confirm('确定要取餐吗？取餐后订单将标记为已完成，并可进行评价。')) {
             return;
         }
 
@@ -1550,13 +1929,8 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('取餐成功！订单已删除。');
-                // 从表格中移除该行
-                const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
-                if (row) {
-                    row.remove();
-                }
-                // 重新加载订单列表以确保数据同步
+                alert('取餐成功，订单已完成，请尽快评价。');
+                pendingRatingOrderId = Number(orderId);
                 loadOrders();
             } else {
                 alert('取餐失败: ' + data.message);
@@ -1571,7 +1945,7 @@
     // 退出登录
     document.querySelector('.logout-btn').addEventListener('click', function() {
         if (confirm('确定要退出登录吗？')) {
-            window.location.href = '/';
+            window.location.href = '/login/';
         }
     });
 
@@ -1581,6 +1955,7 @@
         loadOrders();
         setupDeleteOrderHandlers();
         setupPickupOrderHandlers();
+        setupRateOrderHandlers();
     });
     </script>
 </body>

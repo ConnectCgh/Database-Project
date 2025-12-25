@@ -270,6 +270,86 @@
             line-height: 1.6;
         }
 
+        /* 关于我们 */
+        .about {
+            margin: 80px 0 60px;
+            padding: 60px;
+            border: 1px solid #21262d;
+            border-radius: 16px;
+            background: radial-gradient(circle at top, rgba(255, 193, 7, 0.08), transparent 55%), #0d1117;
+        }
+
+        .about-grid {
+            display: grid;
+            grid-template-columns: minmax(240px, 2fr) minmax(240px, 3fr);
+            gap: 40px;
+            align-items: center;
+        }
+
+        .about-desc {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #c9d1d9;
+        }
+
+        .about-highlight {
+            color: #ffc107;
+            font-weight: 600;
+        }
+
+        .university-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            border-radius: 999px;
+            padding: 6px 16px;
+            margin-top: 12px;
+            font-size: 0.95rem;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        .team-card {
+            background-color: rgba(22, 27, 34, 0.9);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .team-card:hover {
+            transform: translateY(-6px);
+            border-color: #ffc107;
+        }
+
+        .team-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .team-role {
+            color: #8b949e;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+
+        .team-links a {
+            color: #ffc107;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .team-links a:hover {
+            text-decoration: underline;
+        }
+
         /* 页脚 */
         .footer {
             border-top: 1px solid #21262d;
@@ -311,6 +391,15 @@
 
             .hero-visual {
                 height: 300px;
+            }
+
+            .about {
+                padding: 32px 20px;
+            }
+
+            .about-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
             }
         }
 
@@ -398,6 +487,48 @@
                     <div class="feature-icon">💰</div>
                     <h3 class="feature-title">优惠多多</h3>
                     <p class="feature-desc">每日特惠、会员专享、满减活动，让您享受更多实惠</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 关于我们 -->
+        <section id="about" class="about">
+            <div class="about-grid">
+                <div>
+                    <h2 class="section-title" style="text-align: left; margin-bottom: 20px;">关于我们</h2>
+                    <p class="about-desc">
+                        SpeedEats 由 <span class="about-highlight">北京航空航天大学</span> 的开发者共同打造。
+                        我们以工程化思维打磨外卖业务流，确保顾客、商家、平台、骑手四端体验一致且高效，
+                        并持续在评分系统、调度逻辑和数据可视化上探索更多可能。
+                    </p>
+                    <div class="university-badge">
+                        🎓 北京航空航天大学 · Database Lab
+                    </div>
+                </div>
+                <div>
+                    <div class="team-grid">
+                        <div class="team-card">
+                            <div class="team-name">focalors</div>
+                            <div class="team-role">后端 / 数据库 · 评分系统、SQL 基础设施</div>
+                            <div class="team-links">
+                                <a href="https://github.com/focalors" target="_blank" rel="noopener">GitHub @focalors →</a>
+                            </div>
+                        </div>
+                        <div class="team-card">
+                            <div class="team-name">ConnectC</div>
+                            <div class="team-role">全栈体验 · 主页、业务流程与 UI</div>
+                            <div class="team-links">
+                                <a href="https://github.com/ConnectC" target="_blank" rel="noopener">GitHub @ConnectC →</a>
+                            </div>
+                        </div>
+                        <div class="team-card">
+                            <div class="team-name">项目仓库</div>
+                            <div class="team-role">了解更多实现细节和设计稿</div>
+                            <div class="team-links">
+                                <a href="https://github.com/ConnectCgh/Database-Project" target="_blank" rel="noopener">GitHub /SpeedEats →</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

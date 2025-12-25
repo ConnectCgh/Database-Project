@@ -515,33 +515,35 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th>订单号</th>
                                     <th>商家</th>
                                     <th>顾客</th>
+                                    <th>餐品</th>
                                     <th>总价格</th>
                                     <th>状态</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for group in unassigned_order_groups %}
-                                <tr>
-                                    <td>{{ group.merchant__merchant_name }}</td>
-                                    <td>{{ group.customer__customer_name }}</td>
-                                    <td>¥{{ group.total_price }}</td>
+                                {% for order in unassigned_orders %}
+                                <tr data-order-id="{{ order.id }}">
+                                    <td>#{{ order.id }}</td>
+                                    <td>{{ order.merchant_name }}</td>
+                                    <td>{{ order.customer_name }}</td>
+                                    <td>{{ order.meal_summary }}</td>
+                                    <td>¥{{ order.price }}</td>
                                     <td><span class="status-badge status-unassigned">待接单</span></td>
-                                    <!-- 待接订单部分 -->
                                     <td>
                                         <button class="btn btn-accept accept-orders-btn"
                                                 style="padding: 4px 8px;"
-                                                data-merchant-id="{{ group.merchant_id }}"
-                                                data-customer-id="{{ group.customer_id }}">
+                                                data-order-id="{{ order.id }}">
                                             接单
                                         </button>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" style="text-align: center;">暂无待接订单</td>
+                                    <td colspan="7" style="text-align: center;">暂无待接订单</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -559,40 +561,44 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th>订单号</th>
                                     <th>商家</th>
                                     <th>顾客</th>
+                                    <th>餐品</th>
                                     <th>总价格</th>
                                     <th>状态</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for group in accepted_order_groups %}
-                                <tr>
-                                    <td>{{ group.merchant__merchant_name }}</td>
-                                    <td>{{ group.customer__customer_name }}</td>
-                                    <td>¥{{ group.total_price }}</td>
+                                {% for order in accepted_orders %}
+                                <tr data-order-id="{{ order.id }}">
+                                    <td>#{{ order.id }}</td>
+                                    <td>{{ order.merchant_name }}</td>
+                                    <td>{{ order.customer_name }}</td>
+                                    <td>{{ order.meal_summary }}</td>
+                                    <td>¥{{ order.price }}</td>
                                     <td>
-                                        <span class="status-badge status-assigned">已接单</span>
+                                    <span class="status-badge {% if order.status == 'ready' %}status-ready{% else %}status-assigned{% endif %}">
+                                        {{ order.status_display }}
+                                    </span>
                                     </td>
                                     <td>
                                         <button class="btn btn-success complete-orders-btn"
                                                 style="padding: 4px 8px; margin-right: 5px;"
-                                                data-merchant-id="{{ group.merchant_id }}"
-                                                data-customer-id="{{ group.customer_id }}">
+                                                data-order-id="{{ order.id }}">
                                             完成
                                         </button>
                                         <button class="btn btn-danger cancel-orders-btn"
                                                 style="padding: 4px 8px;"
-                                                data-merchant-id="{{ group.merchant_id }}"
-                                                data-customer-id="{{ group.customer_id }}">
+                                                data-order-id="{{ order.id }}">
                                             取消
                                         </button>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="5" style="text-align: center;">暂无已接收订单</td>
+                                    <td colspan="7" style="text-align: center;">暂无已接收订单</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -688,290 +694,94 @@
             });
         });
 
-        // 将订单移动到已接收订单列表
-        function moveToAcceptedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice) {
-            // 从待接订单列表移除
-            row.remove();
 
-            // 获取已接收订单表格的tbody
-            const acceptedTable = document.querySelector('#order-section .content-card:last-child table tbody');
 
-            // 检查是否显示"暂无已接收订单"的提示行
-            if (acceptedTable.children.length === 1 && acceptedTable.children[0].textContent.includes('暂无')) {
-                acceptedTable.innerHTML = ''; // 清空提示行
+        function handleOrderAction(button, url, confirmTemplate, workingText) {
+            const orderId = button.getAttribute('data-order-id');
+            if (!orderId) {
+                alert('订单信息缺失');
+                return;
+            }
+            const row = button.closest('tr');
+            const merchantName = row?.querySelector('td:nth-child(2)')?.textContent.trim() || '';
+            const customerName = row?.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+            const confirmMessage = confirmTemplate
+                .replace('{merchant}', merchantName)
+                .replace('{customer}', customerName);
+            if (!confirm(confirmMessage)) {
+                return;
             }
 
-            // 创建新的已接收订单行
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td>${merchantName}</td>
-                <td>${customerName}</td>
-                <td>${totalPrice}</td>
-                <td><span class="status-badge status-assigned">已接单</span></td>
-                <td>
-                    <button class="btn btn-success complete-orders-btn"
-                            style="padding: 4px 8px; margin-right: 5px;"
-                            data-merchant-id="${merchantId}"
-                            data-customer-id="${customerId}">
-                        完成
-                    </button>
-                    <button class="btn btn-danger cancel-orders-btn"
-                            style="padding: 4px 8px;"
-                            data-merchant-id="${merchantId}"
-                            data-customer-id="${customerId}">
-                        取消
-                    </button>
-                </td>
-            `;
+            const csrfToken = getCSRFToken();
+            const originalText = button.textContent;
+            button.textContent = workingText;
+            button.disabled = true;
 
-            // 添加到已接收订单列表
-            acceptedTable.appendChild(newRow);
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'order_id': orderId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert('操作失败: ' + data.message);
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('网络错误，请重试: ' + error.message);
+                button.textContent = originalText;
+                button.disabled = false;
+            });
         }
 
-        // 将订单移动到待接订单列表
-        function moveToUnassignedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice) {
-            // 从已接收订单列表移除
-            row.remove();
-
-            // 获取待接订单表格的tbody
-            const unassignedTable = document.querySelector('#order-section .content-card:first-child table tbody');
-
-            // 检查是否显示"暂无待接订单"的提示行
-            if (unassignedTable.children.length === 1 && unassignedTable.children[0].textContent.includes('暂无')) {
-                unassignedTable.innerHTML = ''; // 清空提示行
-            }
-
-            // 创建新的待接订单行
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td>${merchantName}</td>
-                <td>${customerName}</td>
-                <td>${totalPrice}</td>
-                <td><span class="status-badge status-unassigned">待接单</span></td>
-                <td>
-                    <button class="btn btn-accept accept-orders-btn"
-                            style="padding: 4px 8px;"
-                            data-merchant-id="${merchantId}"
-                            data-customer-id="${customerId}">
-                        接单
-                    </button>
-                </td>
-            `;
-
-            // 添加到待接订单列表
-            unassignedTable.appendChild(newRow);
-        }
-
-
-        // 接单功能（批量）
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('accept-orders-btn')) {
-                const merchantId = e.target.getAttribute('data-merchant-id');
-                const customerId = e.target.getAttribute('data-customer-id');
-                const merchantName = e.target.closest('tr').querySelector('td:nth-child(1)').textContent;
-                const customerName = e.target.closest('tr').querySelector('td:nth-child(2)').textContent;
-                const totalPrice = e.target.closest('tr').querySelector('td:nth-child(3)').textContent;
-                const row = e.target.closest('tr'); // 保存行引用
-
-                if (confirm(`确定要接取 ${merchantName} 给 ${customerName} 的所有订单吗？`)) {
-                    // 显示加载状态
-                    const originalText = e.target.textContent;
-                    e.target.textContent = '接单中...';
-                    e.target.disabled = true;
-
-                    // 获取 CSRF token
-                    const csrfToken = getCSRFToken();
-
-                    // 发送 AJAX 请求
-                    fetch('/rider/accept-orders/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: new URLSearchParams({
-                            'merchant_id': merchantId,
-                            'customer_id': customerId
-                        })
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                throw new Error(`HTTP ${response.status}: ${text}`);
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            // 将订单移动到已接收订单列表
-                            moveToAcceptedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice);
-
-                            // 如果没有更多待接订单，显示提示
-                            const unassignedTable = document.querySelector('#order-section .content-card:first-child table tbody');
-                            if (unassignedTable && unassignedTable.children.length === 1 && unassignedTable.children[0].textContent.includes('暂无')) {
-                                // 如果只剩提示行，保持显示
-                            } else if (unassignedTable && unassignedTable.children.length === 0) {
-                                unassignedTable.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无待接订单</td></tr>';
-                            }
-                        } else {
-                            alert('接单失败: ' + data.message);
-                            // 恢复按钮状态
-                            e.target.textContent = originalText;
-                            e.target.disabled = false;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('网络错误，请重试: ' + error.message);
-                        // 恢复按钮状态
-                        e.target.textContent = originalText;
-                        e.target.disabled = false;
-                    });
-                }
-            }
-
-            // 取消订单功能（批量）
-            if (e.target.classList.contains('cancel-orders-btn')) {
-                const merchantId = e.target.getAttribute('data-merchant-id');
-                const customerId = e.target.getAttribute('data-customer-id');
-                const merchantName = e.target.closest('tr').querySelector('td:nth-child(1)').textContent;
-                const customerName = e.target.closest('tr').querySelector('td:nth-child(2)').textContent;
-                const totalPrice = e.target.closest('tr').querySelector('td:nth-child(3)').textContent;
-                const row = e.target.closest('tr'); // 保存行引用
-
-                if (confirm(`确定要取消 ${merchantName} 给 ${customerName} 的所有订单吗？`)) {
-                    // 显示加载状态
-                    const originalText = e.target.textContent;
-                    e.target.textContent = '取消中...';
-                    e.target.disabled = true;
-
-                    // 获取 CSRF token
-                    const csrfToken = getCSRFToken();
-
-                    // 发送 AJAX 请求
-                    fetch('/rider/cancel-orders/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: new URLSearchParams({
-                            'merchant_id': merchantId,
-                            'customer_id': customerId
-                        })
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                throw new Error(`HTTP ${response.status}: ${text}`);
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            // 将订单移动到待接订单列表
-                            moveToUnassignedOrders(row, merchantId, customerId, merchantName, customerName, totalPrice);
-
-                            // 如果没有更多已接收订单，显示提示
-                            const acceptedTable = document.querySelector('#order-section .content-card:last-child table tbody');
-                            if (acceptedTable && acceptedTable.children.length === 1 && acceptedTable.children[0].textContent.includes('暂无')) {
-                                // 如果只剩提示行，保持显示
-                            } else if (acceptedTable && acceptedTable.children.length === 0) {
-                                acceptedTable.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无已接收订单</td></tr>';
-                            }
-                        } else {
-                            alert('取消订单失败: ' + data.message);
-                            // 恢复按钮状态
-                            e.target.textContent = originalText;
-                            e.target.disabled = false;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('网络错误，请重试: ' + error.message);
-                        // 恢复按钮状态
-                        e.target.textContent = originalText;
-                        e.target.disabled = false;
-                    });
-                }
-            }
-
-            // 完成订单功能（批量）
-            if (e.target.classList.contains('complete-orders-btn')) {
-                const merchantId = e.target.getAttribute('data-merchant-id');
-                const customerId = e.target.getAttribute('data-customer-id');
-                const merchantName = e.target.closest('tr').querySelector('td:nth-child(1)').textContent;
-                const customerName = e.target.closest('tr').querySelector('td:nth-child(2)').textContent;
-                const row = e.target.closest('tr'); // 保存行引用
-
-                if (confirm(`确定要完成 ${merchantName} 给 ${customerName} 的所有订单吗？`)) {
-                    // 显示加载状态
-                    const originalText = e.target.textContent;
-                    e.target.textContent = '处理中...';
-                    e.target.disabled = true;
-
-                    // 获取 CSRF token
-                    const csrfToken = getCSRFToken();
-
-                    // 发送 AJAX 请求
-                    fetch('/rider/complete-orders/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: new URLSearchParams({
-                            'merchant_id': merchantId,
-                            'customer_id': customerId
-                        })
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                throw new Error(`HTTP ${response.status}: ${text}`);
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            // 移除已完成的订单
-                            row.remove();
-
-                            // 如果没有更多已接收订单，显示提示
-                            const acceptedTable = document.querySelector('#order-section .content-card:last-child table tbody');
-                            if (acceptedTable && acceptedTable.children.length === 1 && acceptedTable.children[0].textContent.includes('暂无')) {
-                                // 如果只剩提示行，保持显示
-                            } else if (acceptedTable && acceptedTable.children.length === 0) {
-                                acceptedTable.innerHTML = '<tr><td colspan="5" style="text-align: center;">暂无已接收订单</td></tr>';
-                            }
-                        } else {
-                            alert('操作失败: ' + data.message);
-                            // 恢复按钮状态
-                            e.target.textContent = originalText;
-                            e.target.disabled = false;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('网络错误，请重试: ' + error.message);
-                        // 恢复按钮状态
-                        e.target.textContent = originalText;
-                        e.target.disabled = false;
-                    });
-                }
+                handleOrderAction(
+                    e.target,
+                    '/rider/accept-orders/',
+                    '确定要接取 {merchant} 给 {customer} 的订单吗？',
+                    '接单中...'
+                );
+            } else if (e.target.classList.contains('cancel-orders-btn')) {
+                handleOrderAction(
+                    e.target,
+                    '/rider/cancel-orders/',
+                    '确定要取消 {merchant} 给 {customer} 的订单吗？',
+                    '取消中...'
+                );
+            } else if (e.target.classList.contains('complete-orders-btn')) {
+                handleOrderAction(
+                    e.target,
+                    '/rider/complete-orders/',
+                    '确定要将 {merchant} 给 {customer} 的订单标记为待取餐吗？',
+                    '完成中...'
+                );
             }
         });
 
         // 退出登录
         document.querySelector('.logout-btn').addEventListener('click', function() {
             if (confirm('确定要退出登录吗？')) {
-                window.location.href = '/';
+                window.location.href = '/login/';
             }
         });
     </script>
