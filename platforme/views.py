@@ -21,6 +21,7 @@ ORDER_STATUS_DISPLAY = {
 }
 
 ORDER_TABLE = quote_table('order')
+ORDER_ITEM_TABLE = quote_table('order_item')
 
 
 def _get_platform(user):
@@ -78,6 +79,10 @@ def _get_rider_requests(platform_id, status):
     } for row in rows]
 
 
+def _build_in_clause(values):
+    return ','.join(['%s'] * len(values))
+
+
 def _get_orders(platform_id):
     query = f'''
         SELECT o.id,
@@ -86,17 +91,53 @@ def _get_orders(platform_id):
                o.created_at,
                c.customer_name,
                m.merchant_name,
-               meal.name AS meal_name,
                r.rider_name
         FROM {ORDER_TABLE} o
         JOIN customer c ON o.customer_id = c.id
         JOIN merchant m ON o.merchant_id = m.id
-        JOIN meal ON o.meal_id = meal.id
         LEFT JOIN rider r ON o.rider_id = r.id
         WHERE o.platform_id = %s
         ORDER BY o.created_at DESC
     '''
-    return execute_fetchall(query, [platform_id])
+    orders = execute_fetchall(query, [platform_id])
+    if not orders:
+        return []
+
+    order_map = {order['id']: order for order in orders}
+    for order in order_map.values():
+        order['meals'] = []
+
+    order_ids = list(order_map.keys())
+    placeholders = _build_in_clause(order_ids)
+    items_query = f'''
+        SELECT oi.order_id,
+               oi.id,
+               meal.name AS meal_name,
+               oi.quantity,
+               oi.unit_price,
+               oi.line_price
+        FROM {ORDER_ITEM_TABLE} oi
+        JOIN meal ON oi.meal_id = meal.id
+        WHERE oi.order_id IN ({placeholders})
+        ORDER BY oi.id
+    '''
+    items = execute_fetchall(items_query, order_ids)
+    for item in items:
+        order_map[item['order_id']]['meals'].append({
+            'item_id': item['id'],
+            'name': item['meal_name'],
+            'quantity': item['quantity'],
+            'unit_price': item['unit_price'],
+            'line_price': item['line_price'],
+        })
+
+    return orders
+
+
+def _format_meal_summary(meals):
+    if not meals:
+        return ''
+    return ', '.join(f"{meal['name']} x{meal['quantity']}" for meal in meals)
 
 
 def _format_orders_for_context(order_rows):
@@ -110,7 +151,8 @@ def _format_orders_for_context(order_rows):
             'created_at': row['created_at'],
             'customer': {'customer_name': row['customer_name']},
             'merchant': {'merchant_name': row['merchant_name']},
-            'meal': {'name': row['meal_name']},
+            'meals': row.get('meals', []),
+            'meal_summary': _format_meal_summary(row.get('meals', [])),
             'rider': {'rider_name': row['rider_name']} if row['rider_name'] else None,
         })
     return formatted
